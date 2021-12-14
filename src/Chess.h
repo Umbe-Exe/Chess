@@ -1,6 +1,7 @@
 #pragma once
 #include "../SDL2-2.0.18/include/SDL.h"
 #include "../SDL2_image-2.0.5/include/SDL_image.h"
+#include "../SDL2_ttf-2.0.15/include/SDL_ttf.h"
 
 class Chess {
 
