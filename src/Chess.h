@@ -16,14 +16,18 @@ public:
 
     void run() {
 
-        align();
-
         SDL_Event event;
-        SDL_WaitEvent(&event);
-        while(event.type != SDL_QUIT) {
-            SDL_WaitEvent(&event);
+        do {
 
-        }
+            drawBoard();
+
+            SDL_WaitEvent(&event);
+            /*switch(event.type) {
+                case SDL_WINDOWEVENT:
+                if(event.window.event == SDL_WINDOWEVENT_RESIZED) SDL_RenderPresent(renderer);
+                break;
+            }*/
+        } while(event.type != SDL_QUIT);
     }
 
     ~Chess() {
@@ -33,7 +37,7 @@ public:
 private:
 
     void loadImages();
-    void align();
+    void drawBoard();
     SDL_Texture *load_texture(char const *path);
     
     SDL_Window *window{};
