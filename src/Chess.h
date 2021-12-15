@@ -9,25 +9,27 @@ public:
     
     Chess() {
         SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO | SDL_INIT_EVENTS);
-        window = SDL_CreateWindow("Chess", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE);
-        renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+        window = SDL_CreateWindow("Chess", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_RESIZABLE);
+        renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE);
 
+        loadCharacters();
         loadImages();
+        createBoard();
     }
 
     void run() {
-
         SDL_Event event;
         do {
-
-            drawBoard();
-
             SDL_WaitEvent(&event);
-            /*switch(event.type) {
+            switch(event.type) {
                 case SDL_WINDOWEVENT:
-                if(event.window.event == SDL_WINDOWEVENT_RESIZED) SDL_RenderPresent(renderer);
+                    if(event.window.event == SDL_WINDOWEVENT_RESIZED) {
+                        destroyTextures();
+                        createBoard();
+                        drawBoard();
+                    }
                 break;
-            }*/
+            }
         } while(event.type != SDL_QUIT);
     }
 
@@ -37,7 +39,10 @@ public:
     
 private:
 
+    void loadCharacters();
     void loadImages();
+    void destroyTextures();
+    void createBoard();
     void drawBoard();
     SDL_Texture *load_texture(char const *path);
     
@@ -70,9 +75,10 @@ private:
         }
     };
 
+    SDL_Texture *charTexture[95];
     SDL_Texture *boardTexture{};
 
-    Piece *(board[8][8]) = {
+    Piece *board[8][8] = {
 
         {new Piece(ROOK, W),new Piece(KNIGHT, W),new Piece(BISHOP, W),new Piece(QUEEN, W),new Piece(KING, W),new Piece(BISHOP, W),new Piece(KNIGHT, W),new Piece(ROOK, W)},
         {new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W)},
