@@ -15,13 +15,12 @@ public:
         loadCharacters();
         loadImages();
         createBoard();
+        drawBoard();
     }
 
     void run() {
         SDL_Event event;
         do {
-
-            drawBoard();
 
             SDL_WaitEvent(&event);
             switch(event.type) {

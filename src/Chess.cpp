@@ -25,39 +25,39 @@ void Chess::loadImages() {
 				switch(board[i][j]->type) {
 					case PAWN:
 					if(board[i][j]->color == W)
-						board[i][j]->image = load_texture("../../img/pawnW.bmp");
+						board[i][j]->image = load_texture("../../img/pawnW.png");
 					else
-						board[i][j]->image = load_texture("../../img/pawnB.bmp");
+						board[i][j]->image = load_texture("../../img/pawnB.png");
 					break;
 					case BISHOP:
 					if(board[i][j]->color == W)
-						board[i][j]->image = load_texture("../../img/bishopW.bmp");
+						board[i][j]->image = load_texture("../../img/bishopW.png");
 					else
-						board[i][j]->image = load_texture("../../img/bishopB.bmp");
+						board[i][j]->image = load_texture("../../img/bishopB.png");
 					break;
 					case KNIGHT:
 					if(board[i][j]->color == W)
-						board[i][j]->image = load_texture("../../img/knightW.bmp");
+						board[i][j]->image = load_texture("../../img/knightW.png");
 					else
-						board[i][j]->image = load_texture("../../img/knightB.bmp");
+						board[i][j]->image = load_texture("../../img/knightB.png");
 					break;
 					case ROOK:
 					if(board[i][j]->color == W)
-						board[i][j]->image = load_texture("../../img/rookW.bmp");
+						board[i][j]->image = load_texture("../../img/rookW.png");
 					else
-						board[i][j]->image = load_texture("../../img/rookB.bmp");
+						board[i][j]->image = load_texture("../../img/rookB.png");
 					break;
 					case QUEEN:
 					if(board[i][j]->color == W)
-						board[i][j]->image = load_texture("../../img/queenW.bmp");
+						board[i][j]->image = load_texture("../../img/queenW.png");
 					else
-						board[i][j]->image = load_texture("../../img/queenB.bmp");
+						board[i][j]->image = load_texture("../../img/queenB.png");
 					break;
 					case KING:
 					if(board[i][j]->color == W)
-						board[i][j]->image = load_texture("../../img/kingW.bmp");
+						board[i][j]->image = load_texture("../../img/kingW.png");
 					else
-						board[i][j]->image = load_texture("../../img/kingB.bmp");
+						board[i][j]->image = load_texture("../../img/kingB.png");
 					break;
 				}
 
@@ -121,6 +121,8 @@ void Chess::createBoard() {
 			}
 
 			SDL_RenderFillRect(renderer, &square);
+
+			if(board[j][i]) SDL_RenderCopy(renderer, board[j][i]->image, 0, &square);
 		}
 	}
 
