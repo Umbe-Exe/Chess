@@ -20,6 +20,9 @@ public:
     void run() {
         SDL_Event event;
         do {
+
+            drawBoard();
+
             SDL_WaitEvent(&event);
             switch(event.type) {
                 case SDL_WINDOWEVENT:
