@@ -216,34 +216,28 @@ void Chess::movePiece(int32_t x, int32_t y) {
 				ic = (movingPiece->position.y - top) / sqSize,
 				jc = (movingPiece->position.x - left) / sqSize;
 
-			if(movingPiece->position.x != INT_MAX) {
-					if(capturedPiece = board[ic][jc]) {
+			if(movingPiece->position.x != INT_MAX && logical(i, j, ic, jc, movingPiece->type, movingPiece->color)) {
+				if(capturedPiece = board[ic][jc]) {
 
-						if(board[ic][jc]->color != movingPiece->color) {
-							if(board[ic][jc]->color == W) whiteCaptured.push_back(board[ic][jc]->type);
-							else blackCaptured.push_back(board[ic][jc]->type);
+					if(board[ic][jc]->color == W) whiteCaptured.push_back(board[ic][jc]->type);
+					else blackCaptured.push_back(board[ic][jc]->type);
 
-							if((ic + jc) % 2) SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
-							else SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
+					if((ic + jc) % 2) SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
+					else SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
 
-							SDL_RenderFillRect(renderer, &capturedPiece->position);
+					SDL_RenderFillRect(renderer, &capturedPiece->position);
 
-							board[ic][jc] = movingPiece;
-							delete capturedPiece;
-						} else {
-							movingPiece->position = pos;
-							board[i][j] = movingPiece;
-						}
-
-					} else board[ic][jc] = movingPiece;
-
-					SDL_RenderCopy(renderer, movingPiece->image, 0, &movingPiece->position);
-				} else {
-					SDL_RenderCopy(renderer, movingPiece->image, 0, &pos);
-
-					movingPiece->position = pos;
-					board[i][j] = movingPiece;
+					delete capturedPiece;
 				}
+				SDL_RenderCopy(renderer, movingPiece->image, 0, &movingPiece->position);
+
+				board[ic][jc] = movingPiece;
+			} else {
+				SDL_RenderCopy(renderer, movingPiece->image, 0, &pos);
+
+				movingPiece->position = pos;
+				board[i][j] = movingPiece;
+			}
 
 			SDL_SetRenderTarget(renderer, 0);
 			SDL_RenderCopy(renderer, boardTexture, 0, 0);
@@ -264,10 +258,51 @@ SDL_Rect Chess::align(SDL_Rect where) {
 	return where;
 }
 
-bool Chess::logical(uint16_t pastR, uint16_t pastC, uint16_t newR, uint16_t newC, PieceType type, PieceColor color) {
+bool Chess::logical(uint8_t pastR, uint8_t pastC, uint8_t newR, uint8_t newC, PieceType type, PieceColor color) {
+
+	if(board[newR][newC]) if(board[newR][newC]->color == color) return false;
+	if(turn != color) return false;
+
+	std::vector<std::pair<uint8_t, uint8_t>> options = getOptions(pastR, pastC, type, color);
+
+	for(auto &i : options)
+		if(i.first == newR && i.second == newC) {
+			turn = !turn;
+			return true;
+		}
+
 	return false;
 }
 
 SDL_Texture *Chess::load_texture(char const *path) {
     return IMG_LoadTexture(renderer, path);
+}
+
+std::vector<std::pair<uint8_t, uint8_t>> Chess::getOptions(uint8_t pastR, uint8_t pastC, PieceType type, PieceColor color) {
+	
+	if(type != KING) {
+		Piece *myKing;
+
+		for(uint8_t i = 0; i < 8; i++)
+			for(uint8_t j = 0; j < 8; j++)
+				if(board[i][j])
+					if(board[i][j]->type == KING && board[i][j]->color == color) myKing = board[i][j];
+	}
+
+	switch(type) {
+		case PAWN:
+			break;
+		case KNIGHT:
+			break;
+		case BISHOP:
+			break;
+		case ROOK:
+			break;
+		case QUEEN:
+			break;
+		case KING:
+			break;
+	}
+
+
 }

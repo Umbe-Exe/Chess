@@ -76,10 +76,11 @@ private:
     };
 
     enum PieceColor {
-        B, W
+        W, B
     };
 
-    bool logical(uint16_t pastR, uint16_t pastC, uint16_t newR, uint16_t newC, PieceType type, PieceColor color);
+    bool logical(uint8_t pastR, uint8_t pastC, uint8_t newR, uint8_t newC, PieceType type, PieceColor color);
+    std::vector<std::pair<uint8_t, uint8_t>> getOptions(uint8_t pastR, uint8_t pastC, PieceType type, PieceColor color);
 
     struct Piece {
         PieceType type;
@@ -104,7 +105,9 @@ private:
 
     uint16_t top, bottom, left, right, sqSize;
 
-    Piece *(board[8][8]) = {
+    bool turn = 0;
+
+    Piece *board[8][8] = {
 
         {new Piece(ROOK, W),new Piece(KNIGHT, W),new Piece(BISHOP, W),new Piece(KING, W),new Piece(QUEEN, W),new Piece(BISHOP, W),new Piece(KNIGHT, W),new Piece(ROOK, W)},
         {new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W)},
