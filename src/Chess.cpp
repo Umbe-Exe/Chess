@@ -1,5 +1,4 @@
 #include "Chess.h"
-#include <string>
 
 void Chess::loadCharacters() {
 	TTF_Init();
@@ -63,15 +62,9 @@ void Chess::loadImages() {
 
 }
 
-void Chess::destroyTextures() {
-
-	SDL_DestroyTexture(boardTexture);
-
-}
-
 void Chess::createBoard() {
 
-	int w, h, sqSize, leftPadd, topPadd, rightPadd, bottomPadd;
+	int w, h, leftPadd, topPadd, rightPadd, bottomPadd;
 	bool white = 0;
 	SDL_Rect square, lineSec;
 
@@ -85,6 +78,11 @@ void Chess::createBoard() {
 
 	if(w - leftPadd - rightPadd > h - topPadd - bottomPadd) sqSize = (h - topPadd - bottomPadd) / 8;
 	else sqSize = (w - leftPadd - rightPadd) / 8;
+
+	top = topPadd;
+	bottom = top + sqSize * 8;
+	left = leftPadd;
+	right = left + sqSize * 8;
 
 	uint16_t lineWidth = sqSize * 50 / 100;
 
@@ -122,7 +120,10 @@ void Chess::createBoard() {
 
 			SDL_RenderFillRect(renderer, &square);
 
-			if(board[j][i]) SDL_RenderCopy(renderer, board[j][i]->image, 0, &square);
+			if(board[j][i]) {
+				board[j][i]->position = square;
+				SDL_RenderCopy(renderer, board[j][i]->image, 0, &square);
+			}
 		}
 	}
 
@@ -168,6 +169,103 @@ void Chess::createBoard() {
 void Chess::drawBoard() {
 	SDL_RenderCopy(renderer, boardTexture, 0, 0);
 	SDL_RenderPresent(renderer);
+}
+
+void Chess::movePiece(int32_t x, int32_t y) {
+
+	Piece *movingPiece = nullptr;
+	uint16_t 
+		i = (y - top) / sqSize, 
+		j = (x - left) / sqSize;
+	SDL_Rect pos;
+
+	if(x > left && x < right && y > top && y < bottom)
+		if(movingPiece = board[i][j]) {
+			pos = movingPiece->position;
+			board[i][j] = nullptr;
+
+			SDL_SetRenderTarget(renderer, boardTexture);
+
+			if((i + j) % 2) SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
+			else SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
+
+			SDL_RenderFillRect(renderer, &movingPiece->position);
+			SDL_SetRenderTarget(renderer, 0);
+
+			SDL_Event event;
+			do {
+				SDL_WaitEvent(&event);
+
+				if(event.type == SDL_MOUSEMOTION) {
+
+					movingPiece->position.x += event.motion.xrel;
+					movingPiece->position.y += event.motion.yrel;
+
+					SDL_RenderCopy(renderer, boardTexture, 0, 0);
+					SDL_RenderCopy(renderer, movingPiece->image, 0, &movingPiece->position);
+					SDL_RenderPresent(renderer);
+				}
+			} while(event.type != SDL_MOUSEBUTTONUP && event.window.event != SDL_WINDOWEVENT_LEAVE);
+
+			SDL_SetRenderTarget(renderer, boardTexture);
+
+			movingPiece->position = align(movingPiece->position);
+
+			Piece *capturedPiece = nullptr;
+			uint16_t
+				ic = (movingPiece->position.y - top) / sqSize,
+				jc = (movingPiece->position.x - left) / sqSize;
+
+			if(movingPiece->position.x != INT_MAX) {
+					if(capturedPiece = board[ic][jc]) {
+
+						if(board[ic][jc]->color != movingPiece->color) {
+							if(board[ic][jc]->color == W) whiteCaptured.push_back(board[ic][jc]->type);
+							else blackCaptured.push_back(board[ic][jc]->type);
+
+							if((ic + jc) % 2) SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
+							else SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
+
+							SDL_RenderFillRect(renderer, &capturedPiece->position);
+
+							board[ic][jc] = movingPiece;
+							delete capturedPiece;
+						} else {
+							movingPiece->position = pos;
+							board[i][j] = movingPiece;
+						}
+
+					} else board[ic][jc] = movingPiece;
+
+					SDL_RenderCopy(renderer, movingPiece->image, 0, &movingPiece->position);
+				} else {
+					SDL_RenderCopy(renderer, movingPiece->image, 0, &pos);
+
+					movingPiece->position = pos;
+					board[i][j] = movingPiece;
+				}
+
+			SDL_SetRenderTarget(renderer, 0);
+			SDL_RenderCopy(renderer, boardTexture, 0, 0);
+			SDL_RenderPresent(renderer);
+		}
+}
+
+SDL_Rect Chess::align(SDL_Rect where) {
+	uint16_t
+		centerX = where.x + where.w / 2,
+		centerY = where.y + where.h / 2;
+
+	if(centerX > left && centerX < right && centerY > top && centerY < bottom) {
+		where.x = centerX - ((centerX - left) % where.w);
+		where.y = centerY - ((centerY - top) % where.h);
+	} else where.x = INT_MAX;
+
+	return where;
+}
+
+bool Chess::logical(uint16_t pastR, uint16_t pastC, uint16_t newR, uint16_t newC, PieceType type, PieceColor color) {
+	return false;
 }
 
 SDL_Texture *Chess::load_texture(char const *path) {
