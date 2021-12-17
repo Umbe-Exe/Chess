@@ -79,8 +79,13 @@ private:
         W, B
     };
 
-    bool logical(uint8_t pastR, uint8_t pastC, uint8_t newR, uint8_t newC, PieceType type, PieceColor color);
-    std::vector<std::pair<uint8_t, uint8_t>> getOptions(uint8_t pastR, uint8_t pastC, PieceType type, PieceColor color);
+    struct Location {
+        uint8_t row, col;
+    };
+
+    bool logical(Location past, Location present, PieceType type, PieceColor color);
+    std::vector<Location> getOptions(Location past, PieceType type, PieceColor color);
+    std::vector<Location> getCheck(Location kingLoc, PieceColor color);
 
     struct Piece {
         PieceType type;
@@ -99,6 +104,9 @@ private:
     };
 
     std::vector<PieceType> whiteCaptured, blackCaptured;
+    bool inCheck;
+    Location whiteKing, blackKing;
+    Location checkingPiece;
 
     SDL_Texture *charTexture[95];
     SDL_Texture *boardTexture{};
