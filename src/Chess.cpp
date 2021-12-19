@@ -174,7 +174,7 @@ void Chess::drawBoard() {
 void Chess::movePiece(int32_t x, int32_t y) {
 
 	Piece *movingPiece = nullptr;
-	uint16_t 
+	uint8_t 
 		i = (y - top) / sqSize, 
 		j = (x - left) / sqSize;
 	SDL_Rect pos;
@@ -212,15 +212,12 @@ void Chess::movePiece(int32_t x, int32_t y) {
 			movingPiece->position = align(movingPiece->position);
 
 			Piece *capturedPiece = nullptr;
-			uint16_t
+			uint8_t
 				ic = (movingPiece->position.y - top) / sqSize,
 				jc = (movingPiece->position.x - left) / sqSize;
 
-			if(movingPiece->position.x != INT_MAX && logical(i, j, ic, jc, movingPiece->type, movingPiece->color)) {
+			if(movingPiece->position.x != INT_MAX && logical({i, j}, {ic, jc}, movingPiece->type, movingPiece->color)) {
 				if(capturedPiece = board[ic][jc]) {
-
-					if(board[ic][jc]->color == W) whiteCaptured.push_back(board[ic][jc]->type);
-					else blackCaptured.push_back(board[ic][jc]->type);
 
 					if((ic + jc) % 2) SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
 					else SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
@@ -258,16 +255,22 @@ SDL_Rect Chess::align(SDL_Rect where) {
 	return where;
 }
 
-bool Chess::logical(uint8_t pastR, uint8_t pastC, uint8_t newR, uint8_t newC, PieceType type, PieceColor color) {
+bool Chess::logical(Location past, Location present, PieceType type, PieceColor color) {
 
-	if(board[newR][newC]) if(board[newR][newC]->color == color) return false;
+	if(board[present.row][present.col]) {
+		if(board[present.row][present.col]->color == color) return false;
+		if(board[present.row][present.col]->color == W) whiteCaptured.push_back(board[present.row][present.col]->type);
+		else blackCaptured.push_back(board[present.row][present.col]->type);
+	}
 	if(turn != color) return false;
+	//if(inCheck(color, present)) return false;
 
-	std::vector<std::pair<uint8_t, uint8_t>> options = getOptions(pastR, pastC, type, color);
+	std::vector<Location> options = getOptions(past, type, color);
 
 	for(auto &i : options)
-		if(i.first == newR && i.second == newC) {
-			turn = !turn;
+		if(i.row == present.row && i.col == present.col) {
+			moveLog.push_back({past, present, type});
+			turn = (PieceColor)!turn;
 			return true;
 		}
 
@@ -278,31 +281,188 @@ SDL_Texture *Chess::load_texture(char const *path) {
     return IMG_LoadTexture(renderer, path);
 }
 
-std::vector<std::pair<uint8_t, uint8_t>> Chess::getOptions(uint8_t pastR, uint8_t pastC, PieceType type, PieceColor color) {
-	
-	if(type != KING) {
-		Piece *myKing;
-
-		for(uint8_t i = 0; i < 8; i++)
-			for(uint8_t j = 0; j < 8; j++)
-				if(board[i][j])
-					if(board[i][j]->type == KING && board[i][j]->color == color) myKing = board[i][j];
-	}
+std::vector<Chess::Location> Chess::getOptions(Location past, PieceType type, PieceColor color) {
+	std::vector<Location> loc;
 
 	switch(type) {
 		case PAWN:
+			if(being == color) {	
+				if(past.row == 6 && !board[4][past.col]) loc.push_back({4,past.col});
+				if(!board[past.row - 1][past.col]) loc.push_back({past.row - 1,past.col});
+				if(board[past.row - 1][past.col - 1]) loc.push_back({past.row - 1,past.col - 1});
+				if(board[past.row - 1][past.col + 1]) loc.push_back({past.row - 1,past.col + 1});
+
+				if(past.row == 3) {
+					Move lastMove = moveLog[moveLog.size() - 1];
+					if(lastMove.type == PAWN && lastMove.after.row == 3) {
+						if(lastMove.after.col == past.col + 1) {
+							loc.push_back({past.row - 1,past.col + 1});
+							if((lastMove.after.row + lastMove.after.col) % 2) SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
+							else SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
+
+							SDL_RenderFillRect(renderer, &board[lastMove.after.row][lastMove.after.col]->position);
+
+							delete board[lastMove.after.row][lastMove.after.col];
+							board[lastMove.after.row][lastMove.after.col] = 0;
+						}
+						else if(lastMove.after.col == past.col - 1) {
+							loc.push_back({past.row - 1,past.col - 1});
+							if((lastMove.after.row + lastMove.after.col) % 2) SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
+							else SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
+
+							SDL_RenderFillRect(renderer, &board[lastMove.after.row][lastMove.after.col]->position);
+
+							delete board[lastMove.after.row][lastMove.after.col];
+							board[lastMove.after.row][lastMove.after.col] = 0;
+						}
+					}
+				}
+			} else {
+				if(past.row == 1 && !board[3][past.col]) loc.push_back({3,past.col});
+				if(!board[past.row + 1][past.col]) loc.push_back({past.row + 1,past.col});
+				if(board[past.row + 1][past.col - 1]) loc.push_back({past.row + 1,past.col - 1});
+				if(board[past.row + 1][past.col + 1]) loc.push_back({past.row + 1,past.col + 1});
+
+				if(past.row == 4) {
+					Move lastMove = moveLog[moveLog.size() - 1];
+					if(lastMove.type == PAWN && lastMove.after.row == 4) {
+						if(lastMove.after.col == past.col + 1) {
+							loc.push_back({past.row + 1,past.col + 1});
+							if((lastMove.after.row + lastMove.after.col) % 2) SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
+							else SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
+
+							SDL_RenderFillRect(renderer, &board[lastMove.after.row][lastMove.after.col]->position);
+
+							delete board[lastMove.after.row][lastMove.after.col];
+							board[lastMove.after.row][lastMove.after.col] = 0;
+						}
+						else if(lastMove.after.col == past.col - 1) {
+							loc.push_back({past.row + 1,past.col - 1});
+							if((lastMove.after.row + lastMove.after.col) % 2) SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
+							else SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
+
+							SDL_RenderFillRect(renderer, &board[lastMove.after.row][lastMove.after.col]->position);
+
+							delete board[lastMove.after.row][lastMove.after.col];
+							board[lastMove.after.row][lastMove.after.col] = 0;
+						}
+					}
+				}
+			}
 			break;
 		case KNIGHT:
+			loc = {
+					{past.row + 1, past.col - 2},
+					{past.row + 2, past.col - 1},
+					{past.row + 2, past.col + 1},
+					{past.row + 1, past.col + 2},
+					{past.row - 1, past.col - 2},
+					{past.row - 2, past.col - 1},
+					{past.row - 2, past.col + 1},
+					{past.row - 1, past.col + 2}};
 			break;
 		case BISHOP:
-			break;
-		case ROOK:
+			for(uint8_t i = 0; i < (past.row < past.col ? past.row : past.col); i++) {
+				if(board[past.row - i][past.col - i]->color == color) break;
+				loc.push_back({past.row - i, past.col - i});
+			}
+			for(uint8_t i = 0; i < (7 - past.row < 7 - past.col ? 7 - past.row : 7 - past.col); i++) {
+				if(board[past.row + i][past.col + i]->color == color) break;
+				loc.push_back({past.row + i, past.col + i});
+			}
+			for(uint8_t i = 0; i < (7 - past.row < past.col ? 7 - past.row : past.col); i++) {
+				if(board[past.row + i][past.col - i]->color == color) break;
+				loc.push_back({past.row + i, past.col - i});
+			}
+			for(uint8_t i = 0; i < (past.row < 7 - past.col ? past.row : 7 - past.col); i++) {
+				if(board[past.row - i][past.col + i]->color == color) break;
+				loc.push_back({past.row - i, past.col + i});
+			}
 			break;
 		case QUEEN:
+			break;
+		case ROOK:
 			break;
 		case KING:
 			break;
 	}
-
-
+	return loc;
 }
+
+bool Chess::inCheck(PieceColor color, Location friendly) {
+	return 0;
+}
+
+
+/*std::vector<std::pair<uint8_t, uint8_t>> cells;
+
+	uint8_t row = kingR;
+	uint8_t col = kingC;
+
+	Piece *tPiece;
+
+	while(row < 7) {
+		row++;
+		cells.push_back({row, kingC});
+
+		if(tPiece = board[row][kingC]) {
+			if(tPiece->color != color) {
+				if(tPiece->type == QUEEN || tPiece->type == ROOK) return cells;
+				else if(tPiece->type == KING) {
+					if((row - kingR) == 1) return cells;
+					else break;
+				} else break;
+			} else break;
+		}
+	}
+	cells.clear();
+
+	while(row > 0) {
+		row--;
+		cells.push_back({row, kingC});
+
+		if(tPiece = board[row][kingC]) {
+			if(tPiece->color != color) {
+				if(tPiece->type == QUEEN || tPiece->type == ROOK) return cells;
+				else if(tPiece->type == KING) {
+					if((kingR - row) == 1) return cells;
+					else break;
+				} else break;
+			} else break;
+		}
+	}
+	cells.clear();
+	///////////////
+	while(col < 7) {
+		col++;
+		cells.push_back({kingR, col});
+
+		if(tPiece = board[kingR][col]) {
+			if(tPiece->color != color) {
+				if(tPiece->type == QUEEN || tPiece->type == ROOK) return cells;
+				else if(tPiece->type == KING) {
+					if((col - kingC) == 1) return cells;
+					else break;
+				} else break;
+			} else break;
+		}
+	}
+	cells.clear();
+
+	while(col > 0) {
+		col--;
+		cells.push_back({kingR, col});
+
+		if(tPiece = board[kingR][col]) {
+			if(tPiece->color != color) {
+				if(tPiece->type == QUEEN || tPiece->type == ROOK) return cells;
+				else if(tPiece->type == KING) {
+					if((kingC - col) == 1) return cells;
+					else break;
+				} else break;
+			} else break;
+		}
+	}
+	cells.clear();
+	///////////////
+	*/

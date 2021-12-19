@@ -76,16 +76,16 @@ private:
     };
 
     enum PieceColor {
-        W, B
+        B, W
     };
 
     struct Location {
-        uint8_t row, col;
+        int row, col;
     };
 
     bool logical(Location past, Location present, PieceType type, PieceColor color);
     std::vector<Location> getOptions(Location past, PieceType type, PieceColor color);
-    std::vector<Location> getCheck(Location kingLoc, PieceColor color);
+    bool inCheck(PieceColor color, Location friendly);
 
     struct Piece {
         PieceType type;
@@ -103,28 +103,36 @@ private:
         }
     };
 
+    struct Move {
+        Location before, after;
+        PieceType type;
+    };
+
+    std::vector<Move> moveLog;
+
     std::vector<PieceType> whiteCaptured, blackCaptured;
-    bool inCheck;
     Location whiteKing, blackKing;
-    Location checkingPiece;
 
     SDL_Texture *charTexture[95];
     SDL_Texture *boardTexture{};
 
     uint16_t top, bottom, left, right, sqSize;
 
-    bool turn = 0;
+    PieceColor turn = W;
+    PieceColor being = W;
+
+    bool leftCastleWhite = 1, leftCastleBlack = 1, rightCastleWhite = 1, rightCastleBlack = 1;
 
     Piece *board[8][8] = {
 
-        {new Piece(ROOK, W),new Piece(KNIGHT, W),new Piece(BISHOP, W),new Piece(KING, W),new Piece(QUEEN, W),new Piece(BISHOP, W),new Piece(KNIGHT, W),new Piece(ROOK, W)},
-        {new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W)},
-        {nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr},
-        {nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr},
-        {nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr},
-        {nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr},
+        {new Piece(ROOK, B),new Piece(KNIGHT, B),new Piece(BISHOP, B),new Piece(QUEEN, B),new Piece(KING, B),new Piece(BISHOP, B),new Piece(KNIGHT, B),new Piece(ROOK, B)},
         {new Piece(PAWN, B),new Piece(PAWN, B),new Piece(PAWN, B),new Piece(PAWN, B),new Piece(PAWN, B),new Piece(PAWN, B),new Piece(PAWN, B),new Piece(PAWN, B)},
-        {new Piece(ROOK, B),new Piece(KNIGHT, B),new Piece(BISHOP, B),new Piece(KING, B),new Piece(QUEEN, B),new Piece(BISHOP, B),new Piece(KNIGHT, B),new Piece(ROOK, B)}
+        {nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr},
+        {nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr},
+        {nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr},
+        {nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr},
+        {new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W)},
+        {new Piece(ROOK, W),new Piece(KNIGHT, W),new Piece(BISHOP, W),new Piece(QUEEN, W),new Piece(KING, W),new Piece(BISHOP, W),new Piece(KNIGHT, W),new Piece(ROOK, W)}
 
     };
 
