@@ -86,6 +86,7 @@ private:
     bool logical(Location past, Location present, PieceType type, PieceColor color);
     std::vector<Location> getOptions(Location past, PieceType type, PieceColor color);
     bool inCheck(PieceColor color, Location friendly);
+    bool inCheck(Location pos, PieceColor color);
 
     struct Piece {
         PieceType type;
