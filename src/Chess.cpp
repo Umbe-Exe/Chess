@@ -362,20 +362,44 @@ std::vector<Chess::Location> Chess::getOptions(Location past, PieceType type, Pi
 					{past.row - 1, past.col + 2}};
 			break;
 		case BISHOP:
-			for(uint8_t i = 0; i < (past.row < past.col ? past.row : past.col); i++) {
-				if(board[past.row - i][past.col - i]->color == color) break;
+			for(uint8_t i = 1; i <= (past.row < past.col ? past.row : past.col); i++) {
+				if(board[past.row - i][past.col - i]) {
+					if(board[past.row - i][past.col - i]->color == color) break;
+					else {
+						loc.push_back({past.row - i, past.col - i});
+						break;
+					}
+				}
 				loc.push_back({past.row - i, past.col - i});
 			}
-			for(uint8_t i = 0; i < (7 - past.row < 7 - past.col ? 7 - past.row : 7 - past.col); i++) {
-				if(board[past.row + i][past.col + i]->color == color) break;
+			for(uint8_t i = 1; i <= (7 - past.row < 7 - past.col ? 7 - past.row : 7 - past.col); i++) {
+				if(board[past.row + i][past.col + i]) {
+					if(board[past.row + i][past.col + i]->color == color) break;
+					else {
+						loc.push_back({past.row + i, past.col + i});
+						break;
+					}
+				}
 				loc.push_back({past.row + i, past.col + i});
 			}
-			for(uint8_t i = 0; i < (7 - past.row < past.col ? 7 - past.row : past.col); i++) {
-				if(board[past.row + i][past.col - i]->color == color) break;
+			for(uint8_t i = 1; i <= (7 - past.row < past.col ? 7 - past.row : past.col); i++) {
+				if(board[past.row + i][past.col - i]) {
+					if(board[past.row + i][past.col - i]->color == color) break;
+					else {
+						loc.push_back({past.row + i, past.col - i});
+						break;
+					}
+				}
 				loc.push_back({past.row + i, past.col - i});
 			}
-			for(uint8_t i = 0; i < (past.row < 7 - past.col ? past.row : 7 - past.col); i++) {
-				if(board[past.row - i][past.col + i]->color == color) break;
+			for(uint8_t i = 1; i <= (past.row < 7 - past.col ? past.row : 7 - past.col); i++) {
+				if(board[past.row - i][past.col + i]) {
+					if(board[past.row - i][past.col + i]->color == color) break;
+					else {
+						loc.push_back({past.row - i, past.col + i});
+						break;
+					}
+				}
 				loc.push_back({past.row - i, past.col + i});
 			}
 			break;
