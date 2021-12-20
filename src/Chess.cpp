@@ -404,6 +404,86 @@ std::vector<Chess::Location> Chess::getOptions(Location past, PieceType type, Pi
 			}
 			break;
 		case QUEEN:
+			for(uint8_t i = 1; i <= (past.row < past.col ? past.row : past.col); i++) {
+				if(board[past.row - i][past.col - i]) {
+					if(board[past.row - i][past.col - i]->color == color) break;
+					else {
+						loc.push_back({past.row - i, past.col - i});
+						break;
+					}
+				}
+				loc.push_back({past.row - i, past.col - i});
+			}
+			for(uint8_t i = 1; i <= (7 - past.row < 7 - past.col ? 7 - past.row : 7 - past.col); i++) {
+				if(board[past.row + i][past.col + i]) {
+					if(board[past.row + i][past.col + i]->color == color) break;
+					else {
+						loc.push_back({past.row + i, past.col + i});
+						break;
+					}
+				}
+				loc.push_back({past.row + i, past.col + i});
+			}
+			for(uint8_t i = 1; i <= (7 - past.row < past.col ? 7 - past.row : past.col); i++) {
+				if(board[past.row + i][past.col - i]) {
+					if(board[past.row + i][past.col - i]->color == color) break;
+					else {
+						loc.push_back({past.row + i, past.col - i});
+						break;
+					}
+				}
+				loc.push_back({past.row + i, past.col - i});
+			}
+			for(uint8_t i = 1; i <= (past.row < 7 - past.col ? past.row : 7 - past.col); i++) {
+				if(board[past.row - i][past.col + i]) {
+					if(board[past.row - i][past.col + i]->color == color) break;
+					else {
+						loc.push_back({past.row - i, past.col + i});
+						break;
+					}
+				}
+				loc.push_back({past.row - i, past.col + i});
+			}
+			for(uint8_t i = 1; i <= past.row; i++) {
+				if(board[past.row - i][past.col]) {
+					if(board[past.row - i][past.col]->color == color) break;
+					else {
+						loc.push_back({past.row - i, past.col});
+						break;
+					}
+				}
+				loc.push_back({past.row - i, past.col});
+			}
+			for(uint8_t i = 1; i <= 7 - past.row ; i++) {
+				if(board[past.row + i][past.col]) {
+					if(board[past.row + i][past.col]->color == color) break;
+					else {
+						loc.push_back({past.row + i, past.col});
+						break;
+					}
+				}
+				loc.push_back({past.row + i, past.col});
+			}
+			for(uint8_t i = 1; i <= past.col; i++) {
+				if(board[past.row][past.col - i]) {
+					if(board[past.row][past.col - i]->color == color) break;
+					else {
+						loc.push_back({past.row, past.col - i});
+						break;
+					}
+				}
+				loc.push_back({past.row, past.col - i});
+			}
+			for(uint8_t i = 1; i <= 7 - past.col; i++) {
+				if(board[past.row][past.col + i]) {
+					if(board[past.row][past.col + i]->color == color) break;
+					else {
+						loc.push_back({past.row, past.col + i});
+						break;
+					}
+				}
+				loc.push_back({past.row, past.col + i});
+			}
 			break;
 		case ROOK:
 			break;
