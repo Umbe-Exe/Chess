@@ -257,20 +257,177 @@ SDL_Rect Chess::align(SDL_Rect where) {
 
 bool Chess::logical(Location past, Location present, PieceType type, PieceColor color) {
 
-	if(board[present.row][present.col]) {
-		if(board[present.row][present.col]->color == color) return false;
-		/* shouldnt go here
-		if(board[present.row][present.col]->color == W) whiteCaptured.push_back(board[present.row][present.col]->type);
-		else blackCaptured.push_back(board[present.row][present.col]->type);*/
-	}
+	if(board[present.row][present.col]) if(board[present.row][present.col]->color == color) return false;
 	if(turn != color) return false;
 	if(type != KING) if(inCheck(color, present)) return false;
+
+	if(type == PAWN) {
+		bool enPassant = 0;
+		Move lastMove = moveLog[moveLog.size() - 1];
+		if(being == color) {
+			if(past.row == 3) {
+				if(lastMove.type == PAWN && lastMove.after.row == 3)
+					if(lastMove.after.col == past.col + 1) {
+						if(past.row - 1 == present.row && present.col == past.col + 1) enPassant = 1;
+					} else if(lastMove.after.col == past.col - 1) {
+						if(past.row - 1 == present.row && present.col == past.col - 1) enPassant = 1;
+					}
+			}
+		} else {
+			if(past.row == 4) {
+				if(lastMove.type == PAWN && lastMove.after.row == 4)
+					if(lastMove.after.col == past.col + 1) {
+						if(past.row + 1 == present.row && present.col == past.col + 1) enPassant = 1;
+					} else if(lastMove.after.col == past.col - 1) {
+						if(past.row + 1 == present.row && present.col == past.col - 1) enPassant = 1;
+					}
+			}
+		}
+		if(enPassant) {
+			Piece *capturedPiece = board[lastMove.after.row][lastMove.after.col];
+			board[lastMove.after.row][lastMove.after.col] = 0;
+			if(!inCheck((color == W ? whiteKing : blackKing), color)) {
+				if((lastMove.after.row + lastMove.after.col) % 2) SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
+				else SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
+
+				SDL_RenderFillRect(renderer, &capturedPiece->position);
+
+				if(capturedPiece->color == W) whiteCaptured.push_back(PAWN);
+				else blackCaptured.push_back(PAWN);
+
+				delete capturedPiece;
+				moveLog.push_back({past, present, type});
+				turn = (PieceColor)!turn;
+				return true;
+			} //extremely rare case
+			board[lastMove.after.row][lastMove.after.col] = capturedPiece;
+			return false;
+		}
+	} else if(type == KING) {
+		bool castleRight = 0, castleLeft = 0;
+		if(color == W) {
+			if(leftCastleWhite) {
+				if(being == color) {
+					if(!(board[whiteKing.row][whiteKing.col - 1] || board[whiteKing.row][whiteKing.col - 2] || board[whiteKing.row][whiteKing.col - 3] ||
+						 inCheck({whiteKing.row,whiteKing.col}, color) || inCheck({whiteKing.row,whiteKing.col - 1}, color) || inCheck({whiteKing.row,whiteKing.col - 2}, color))) {
+						if(whiteKing.row == present.row && whiteKing.col - 2 == present.col) castleLeft = 1;
+					}
+				} else {
+					if(!(board[whiteKing.row][whiteKing.col + 1] || board[whiteKing.row][whiteKing.col + 2] || board[whiteKing.row][whiteKing.col + 3] ||
+						 inCheck({whiteKing.row,whiteKing.col}, color) || inCheck({whiteKing.row,whiteKing.col + 1}, color) || inCheck({whiteKing.row,whiteKing.col + 2}, color))) {
+						if(whiteKing.row == present.row && whiteKing.col + 2 == present.col) castleRight = 1;
+					}
+				}
+			}
+			if(rightCastleWhite) {
+				if(being == color) {
+					if(!(board[whiteKing.row][whiteKing.col + 1] || board[whiteKing.row][whiteKing.col + 2] ||
+						 inCheck({whiteKing.row,whiteKing.col}, color) || inCheck({whiteKing.row,whiteKing.col + 1}, color) || inCheck({whiteKing.row,whiteKing.col + 2}, color))) {
+						if(whiteKing.row == present.row && whiteKing.col + 2 == present.col) castleRight = 1;
+					}
+				} else {
+					if(!(board[whiteKing.row][whiteKing.col - 1] || board[whiteKing.row][whiteKing.col - 2] ||
+						 inCheck({whiteKing.row,whiteKing.col}, color) || inCheck({whiteKing.row,whiteKing.col - 1}, color) || inCheck({whiteKing.row,whiteKing.col - 2}, color))) {
+						if(whiteKing.row == present.row && whiteKing.col - 2 == present.col) castleLeft = 1;
+					}
+				}
+			}
+		} else {
+			if(leftCastleBlack) {
+				if(being == color) {
+					if(!(board[whiteKing.row][whiteKing.col - 1] || board[whiteKing.row][whiteKing.col - 2] ||
+						 inCheck({whiteKing.row,whiteKing.col}, color) || inCheck({whiteKing.row,whiteKing.col - 1}, color) || inCheck({whiteKing.row,whiteKing.col - 2}, color))) {
+						if(whiteKing.row == present.row && whiteKing.col - 2 == present.col) castleLeft = 1;
+					}
+				} else {
+					if(!(board[whiteKing.row][whiteKing.col + 1] || board[whiteKing.row][whiteKing.col + 2] ||
+						 inCheck({whiteKing.row,whiteKing.col}, color) || inCheck({whiteKing.row,whiteKing.col + 1}, color) || inCheck({whiteKing.row,whiteKing.col + 2}, color))) {
+						if(whiteKing.row == present.row && whiteKing.col + 2 == present.col) castleRight = 1;
+					}
+				}
+			}
+			if(rightCastleBlack) {
+				if(being == color) {
+					if(!(board[whiteKing.row][whiteKing.col + 1] || board[whiteKing.row][whiteKing.col + 2] || board[whiteKing.row][whiteKing.col + 3] ||
+						 inCheck({whiteKing.row,whiteKing.col}, color) || inCheck({whiteKing.row,whiteKing.col + 1}, color) || inCheck({whiteKing.row,whiteKing.col + 2}, color))) {
+						if(whiteKing.row == present.row && whiteKing.col + 2 == present.col) castleRight = 1;
+					}
+				} else {
+					if(!(board[whiteKing.row][whiteKing.col - 1] || board[whiteKing.row][whiteKing.col - 2] || board[whiteKing.row][whiteKing.col - 3] ||
+						 inCheck({whiteKing.row,whiteKing.col}, color) || inCheck({whiteKing.row,whiteKing.col - 1}, color) || inCheck({whiteKing.row,whiteKing.col - 2}, color))) {
+						if(whiteKing.row == present.row && whiteKing.col - 2 == present.col) castleLeft = 1;
+					}
+				}
+			}
+		}
+		if(castleRight || castleLeft) {
+			if(color == W) {
+				leftCastleWhite = 0;
+				rightCastleWhite = 0;
+			} else {
+				leftCastleBlack = 0;
+				rightCastleBlack = 0;
+			}
+
+			if(castleLeft) {
+				if(past.row == 7) SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
+				else SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
+				SDL_RenderFillRect(renderer, &board[present.row][0]->position);
+
+				board[present.row][0]->position.x = board[present.row][present.col]->position.x + sqSize;
+				SDL_RenderCopy(renderer, board[present.row][0]->image, 0, &board[present.row][0]->position);
+
+				board[present.row][present.col + 1] = board[present.row][0];
+				board[present.row][0] = 0;		
+			} else {
+				if(past.row == 0) SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
+				else SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
+				SDL_RenderFillRect(renderer, &board[present.row][7]->position);
+
+				board[present.row][7]->position.x = board[present.row][present.col]->position.x - sqSize;
+				SDL_RenderCopy(renderer, board[present.row][7]->image, 0, &board[present.row][7]->position);
+
+				board[present.row][present.col - 1] = board[present.row][7];
+				board[present.row][0] = 0;
+			}
+
+			moveLog.push_back({past, present, type});
+			turn = (PieceColor)!turn;
+			return true;
+		}
+	}
 
 	std::vector<Location> options = getOptions(past, type, color);
 
 	for(auto &i : options)
 		if(i.row == present.row && i.col == present.col) {
-			//handle en passant and castling here
+
+			if(type == ROOK) {
+				if(rightCastleWhite && color == W && being == color && past.col == 7) rightCastleWhite = 0;
+				if(rightCastleBlack && color == B && being == color && past.col == 7) rightCastleBlack = 0;
+
+				if(leftCastleWhite && color == W && being == color && past.col == 0) leftCastleWhite = 0;
+				if(leftCastleBlack && color == B && being == color && past.col == 0) leftCastleBlack = 0;
+
+				if(rightCastleWhite && color == W && being != color && past.col == 0) rightCastleWhite = 0;
+				if(rightCastleBlack && color == B && being != color && past.col == 0) rightCastleBlack = 0;
+
+				if(leftCastleWhite && color == W && being != color && past.col == 7) leftCastleWhite = 0;
+				if(leftCastleBlack && color == B && being != color && past.col == 7) leftCastleBlack = 0;
+			} else if(type == KING) {
+				if(color == W) {
+					rightCastleWhite = 0;
+					leftCastleWhite = 0;
+				} else {
+					rightCastleBlack = 0;
+					leftCastleBlack = 0;
+				}
+			}
+
+			if(board[present.row][present.col]) {
+				if(board[present.row][present.col]->color == W) whiteCaptured.push_back(board[present.row][present.col]->type);
+				else blackCaptured.push_back(board[present.row][present.col]->type);
+			}
 			moveLog.push_back({past, present, type});
 			turn = (PieceColor)!turn;
 			return true;
@@ -293,62 +450,11 @@ std::vector<Chess::Location> Chess::getOptions(Location past, PieceType type, Pi
 				if(!board[past.row - 1][past.col]) loc.push_back({past.row - 1,past.col});
 				if(board[past.row - 1][past.col - 1]) loc.push_back({past.row - 1,past.col - 1});
 				if(board[past.row - 1][past.col + 1]) loc.push_back({past.row - 1,past.col + 1});
-
-				/* stupid mistake
-				if(past.row == 3) {
-					Move lastMove = moveLog[moveLog.size() - 1];
-					if(lastMove.type == PAWN && lastMove.after.row == 3) {
-						if(lastMove.after.col == past.col + 1) {
-							loc.push_back({past.row - 1,past.col + 1});
-							if((lastMove.after.row + lastMove.after.col) % 2) SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
-							else SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
-
-							SDL_RenderFillRect(renderer, &board[lastMove.after.row][lastMove.after.col]->position);
-
-							delete board[lastMove.after.row][lastMove.after.col];
-							board[lastMove.after.row][lastMove.after.col] = 0;
-						} else if(lastMove.after.col == past.col - 1) {
-							loc.push_back({past.row - 1,past.col - 1});
-							if((lastMove.after.row + lastMove.after.col) % 2) SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
-							else SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
-
-							SDL_RenderFillRect(renderer, &board[lastMove.after.row][lastMove.after.col]->position);
-
-							delete board[lastMove.after.row][lastMove.after.col];
-							board[lastMove.after.row][lastMove.after.col] = 0;
-						}
-					}
-				}
 			} else {
 				if(past.row == 1 && !board[3][past.col]) loc.push_back({3,past.col});
 				if(!board[past.row + 1][past.col]) loc.push_back({past.row + 1,past.col});
 				if(board[past.row + 1][past.col - 1]) loc.push_back({past.row + 1,past.col - 1});
 				if(board[past.row + 1][past.col + 1]) loc.push_back({past.row + 1,past.col + 1});
-
-				if(past.row == 4) {
-					Move lastMove = moveLog[moveLog.size() - 1];
-					if(lastMove.type == PAWN && lastMove.after.row == 4) {
-						if(lastMove.after.col == past.col + 1) {
-							loc.push_back({past.row + 1,past.col + 1});
-							if((lastMove.after.row + lastMove.after.col) % 2) SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
-							else SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
-
-							SDL_RenderFillRect(renderer, &board[lastMove.after.row][lastMove.after.col]->position);
-
-							delete board[lastMove.after.row][lastMove.after.col];
-							board[lastMove.after.row][lastMove.after.col] = 0;
-						} else if(lastMove.after.col == past.col - 1) {
-							loc.push_back({past.row + 1,past.col - 1});
-							if((lastMove.after.row + lastMove.after.col) % 2) SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
-							else SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
-
-							SDL_RenderFillRect(renderer, &board[lastMove.after.row][lastMove.after.col]->position);
-
-							delete board[lastMove.after.row][lastMove.after.col];
-							board[lastMove.after.row][lastMove.after.col] = 0;
-						}
-					}
-				}*/
 			}
 			break;
 		case KNIGHT:
@@ -584,62 +690,6 @@ std::vector<Chess::Location> Chess::getOptions(Location past, PieceType type, Pi
 						loc.push_back({past.row, past.col - 1});
 			} else if(!inCheck({past.row,past.col - 1}, color))
 				loc.push_back({past.row, past.col - 1});
-
-			if(color == W) {
-				if(leftCastleWhite) {
-					if(being == color) {
-						if(!(board[whiteKing.row][whiteKing.col - 1] || board[whiteKing.row][whiteKing.col - 2] || board[whiteKing.row][whiteKing.col - 3] ||
-							 inCheck({whiteKing.row,whiteKing.col}, color) || inCheck({whiteKing.row,whiteKing.col - 1}, color) || inCheck({whiteKing.row,whiteKing.col - 2}, color))) {
-							loc.push_back({whiteKing.row,whiteKing.col - 2});
-						}
-					} else {
-						if(!(board[whiteKing.row][whiteKing.col + 1] || board[whiteKing.row][whiteKing.col + 2] || board[whiteKing.row][whiteKing.col + 3] ||
-							 inCheck({whiteKing.row,whiteKing.col}, color) || inCheck({whiteKing.row,whiteKing.col + 1}, color) || inCheck({whiteKing.row,whiteKing.col + 2}, color))) {
-							loc.push_back({whiteKing.row,whiteKing.col + 2});
-						}
-					}
-				}
-				if(rightCastleWhite) {
-					if(being == color) {
-						if(!(board[whiteKing.row][whiteKing.col + 1] || board[whiteKing.row][whiteKing.col + 2] ||
-							 inCheck({whiteKing.row,whiteKing.col}, color) || inCheck({whiteKing.row,whiteKing.col + 1}, color) || inCheck({whiteKing.row,whiteKing.col + 2}, color))) {
-							loc.push_back({whiteKing.row,whiteKing.col + 2});
-						}
-					} else {
-						if(!(board[whiteKing.row][whiteKing.col - 1] || board[whiteKing.row][whiteKing.col - 2] ||
-							 inCheck({whiteKing.row,whiteKing.col}, color) || inCheck({whiteKing.row,whiteKing.col - 1}, color) || inCheck({whiteKing.row,whiteKing.col - 2}, color))) {
-							loc.push_back({whiteKing.row,whiteKing.col - 2});
-						}
-					}
-				}
-			} else {
-				if(leftCastleBlack) {
-					if(being == color) {
-						if(!(board[whiteKing.row][whiteKing.col - 1] || board[whiteKing.row][whiteKing.col - 2] ||
-							 inCheck({whiteKing.row,whiteKing.col}, color) || inCheck({whiteKing.row,whiteKing.col - 1}, color) || inCheck({whiteKing.row,whiteKing.col - 2}, color))) {
-							loc.push_back({whiteKing.row,whiteKing.col - 2});
-						}
-					} else {
-						if(!(board[whiteKing.row][whiteKing.col + 1] || board[whiteKing.row][whiteKing.col + 2] ||
-							 inCheck({whiteKing.row,whiteKing.col}, color) || inCheck({whiteKing.row,whiteKing.col + 1}, color) || inCheck({whiteKing.row,whiteKing.col + 2}, color))) {
-							loc.push_back({whiteKing.row,whiteKing.col + 2});
-						}
-					}
-				}
-				if(rightCastleBlack) {
-					if(being == color) {
-						if(!(board[whiteKing.row][whiteKing.col + 1] || board[whiteKing.row][whiteKing.col + 2] || board[whiteKing.row][whiteKing.col + 3] ||
-							 inCheck({whiteKing.row,whiteKing.col}, color) || inCheck({whiteKing.row,whiteKing.col + 1}, color) || inCheck({whiteKing.row,whiteKing.col + 2}, color))) {
-							loc.push_back({whiteKing.row,whiteKing.col + 2});
-						}
-					} else {
-						if(!(board[whiteKing.row][whiteKing.col - 1] || board[whiteKing.row][whiteKing.col - 2] || board[whiteKing.row][whiteKing.col - 3] ||
-							 inCheck({whiteKing.row,whiteKing.col}, color) || inCheck({whiteKing.row,whiteKing.col - 1}, color) || inCheck({whiteKing.row,whiteKing.col - 2}, color))) {
-							loc.push_back({whiteKing.row,whiteKing.col - 2});
-						}
-					}
-				}
-			}
 			break;
 	}
 	return loc;

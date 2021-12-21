@@ -95,7 +95,7 @@ private:
         SDL_Texture *image{};
         SDL_Rect position{};
 
-        Piece(PieceType type = PAWN, PieceColor color = W) {
+        Piece(PieceType type, PieceColor color) {
             this->type = type;
             this->color = color;
         }
@@ -109,7 +109,7 @@ private:
         PieceType type;
     };
 
-    std::vector<Move> moveLog;
+    std::vector<Move> moveLog{Move()};
 
     std::vector<PieceType> whiteCaptured, blackCaptured;
     Location whiteKing, blackKing;
