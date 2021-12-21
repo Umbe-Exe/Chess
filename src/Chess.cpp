@@ -211,13 +211,14 @@ void Chess::movePiece(int32_t x, int32_t y) {
 
 			movingPiece->position = align(movingPiece->position);
 
-			Piece *capturedPiece = nullptr;
 			uint8_t
 				ic = (movingPiece->position.y - top) / sqSize,
 				jc = (movingPiece->position.x - left) / sqSize;
+			Piece *capturedPiece = board[ic][jc];
+			board[ic][jc] = 0;
 
 			if(movingPiece->position.x != INT_MAX && logical({i, j}, {ic, jc}, movingPiece->type, movingPiece->color)) {
-				if(capturedPiece = board[ic][jc]) {
+				if(capturedPiece) {
 
 					if((ic + jc) % 2) SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
 					else SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
@@ -234,6 +235,7 @@ void Chess::movePiece(int32_t x, int32_t y) {
 
 				movingPiece->position = pos;
 				board[i][j] = movingPiece;
+				board[ic][jc] = capturedPiece;
 			}
 
 			SDL_SetRenderTarget(renderer, 0);
@@ -259,7 +261,7 @@ bool Chess::logical(Location past, Location present, PieceType type, PieceColor 
 
 	if(board[present.row][present.col]) if(board[present.row][present.col]->color == color) return false;
 	if(turn != color) return false;
-	if(type != KING) if(inCheck(color, present)) return false;
+	if(type != KING) if(inCheck(color)) return false;
 
 	if(type == PAWN) {
 		bool enPassant = 0;
@@ -364,9 +366,11 @@ bool Chess::logical(Location past, Location present, PieceType type, PieceColor 
 			if(color == W) {
 				leftCastleWhite = 0;
 				rightCastleWhite = 0;
+				whiteKing = present;
 			} else {
 				leftCastleBlack = 0;
 				rightCastleBlack = 0;
+				blackKing = present;
 			}
 
 			if(castleLeft) {
@@ -418,9 +422,11 @@ bool Chess::logical(Location past, Location present, PieceType type, PieceColor 
 				if(color == W) {
 					rightCastleWhite = 0;
 					leftCastleWhite = 0;
+					whiteKing = present;
 				} else {
 					rightCastleBlack = 0;
 					leftCastleBlack = 0;
+					blackKing = present
 				}
 			}
 
@@ -695,10 +701,169 @@ std::vector<Chess::Location> Chess::getOptions(Location past, PieceType type, Pi
 	return loc;
 }
 
-bool Chess::inCheck(PieceColor color, Location friendly) {
-	return 0;
+bool Chess::inCheck(PieceColor color) {
+	Location pos = (color == W ? whiteKing : blackKing);
+
+	return inCheck(pos, color);
 }
 
 bool Chess::inCheck(Location pos, PieceColor color) {
+	for(uint8_t i = 1; i <= (pos.row < pos.col ? pos.row : pos.col); i++) {
+		if(board[pos.row - i][pos.col - i]) {
+			if(board[pos.row - i][pos.col - i]->color == color) break;
+			else {
+				switch(board[pos.row - i][pos.col - i]->type) {
+					case PAWN:
+						break;
+					case BISHOP:
+						break;
+					case QUEEN:
+						break;
+					case KING:
+						break;
+				}
+				break;
+			}
+		}
+		
+	}
+	for(uint8_t i = 1; i <= (7 - pos.row < 7 - pos.col ? 7 - pos.row : 7 - pos.col); i++) {
+		if(board[pos.row + i][pos.col + i]) {
+			if(board[pos.row + i][pos.col + i]->color == color) break;
+			else {
+				switch(board[pos.row - i][pos.col - i]->type) {
+					case PAWN:
+						break;
+					case BISHOP:
+						break;
+					case QUEEN:
+						break;
+					case KING:
+						break;
+				}
+				break;
+			}
+		}
+
+	}
+	for(uint8_t i = 1; i <= (7 - pos.row < pos.col ? 7 - pos.row : pos.col); i++) {
+		if(board[pos.row + i][pos.col - i]) {
+			if(board[pos.row + i][pos.col - i]->color == color) break;
+			else {
+				switch(board[pos.row - i][pos.col - i]->type) {
+					case PAWN:
+						break;
+					case BISHOP:
+						break;
+					case QUEEN:
+						break;
+					case KING:
+						break;
+				}
+				break;
+			}
+		}
+
+	}
+	for(uint8_t i = 1; i <= (pos.row < 7 - pos.col ? pos.row : 7 - pos.col); i++) {
+		if(board[pos.row - i][pos.col + i]) {
+			if(board[pos.row - i][pos.col + i]->color == color) break;
+			else {
+				switch(board[pos.row - i][pos.col - i]->type) {
+					case PAWN:
+						break;
+					case BISHOP:
+						break;
+					case QUEEN:
+						break;
+					case KING:
+						break;
+				}
+				break;
+			}
+		}
+	}
+	for(uint8_t i = 1; i <= pos.row; i++) {
+		if(board[pos.row - i][pos.col]) {
+			if(board[pos.row - i][pos.col]->color == color) break;
+			else {
+				switch(board[pos.row - i][pos.col - i]->type) {
+					case ROOK:
+						break;
+					case QUEEN:
+						break;
+					case KING:
+						break;
+				}
+				break;
+			}
+		}
+	}
+	for(uint8_t i = 1; i <= 7 - pos.row; i++) {
+		if(board[pos.row + i][pos.col]) {
+			if(board[pos.row + i][pos.col]->color == color) break;
+			else {
+				switch(board[pos.row - i][pos.col - i]->type) {
+					case ROOK:
+						break;
+					case QUEEN:
+						break;
+					case KING:
+						break;
+				}
+				break;
+			}
+		}
+	}
+	for(uint8_t i = 1; i <= pos.col; i++) {
+		if(board[pos.row][pos.col - i]) {
+			if(board[pos.row][pos.col - i]->color == color) break;
+			else {
+				switch(board[pos.row - i][pos.col - i]->type) {
+					case ROOK:
+						break;
+					case QUEEN:
+						break;
+					case KING:
+						break;
+				}
+				break;
+			}
+		}
+	}
+	for(uint8_t i = 1; i <= 7 - pos.col; i++) {
+		if(board[pos.row][pos.col + i]) {
+			if(board[pos.row][pos.col + i]->color == color) break;
+			else {
+				switch(board[pos.row - i][pos.col - i]->type) {
+					case ROOK:
+						break;
+					case QUEEN:
+						break;
+					case KING:
+						break;
+				}
+				break;
+			}
+		}
+	}
+	
+	if(board[pos.row + 1][pos.col - 2])
+		if(board[pos.row + 1][pos.col - 2]->color != color && board[pos.row + 1][pos.col - 2]->type == KNIGHT) return 1;
+	if(board[pos.row + 2][pos.col - 1])
+		if(board[pos.row + 2][pos.col - 1]->color != color && board[pos.row + 2][pos.col - 1]->type == KNIGHT) return 1;
+	if(board[pos.row + 2][pos.col + 1])
+		if(board[pos.row + 2][pos.col + 1]->color != color && board[pos.row + 2][pos.col + 1]->type == KNIGHT) return 1;
+	if(board[pos.row + 1][pos.col + 2])
+		if(board[pos.row + 1][pos.col + 2]->color != color && board[pos.row + 1][pos.col + 2]->type == KNIGHT) return 1;
+	if(board[pos.row - 1][pos.col - 2])
+		if(board[pos.row - 1][pos.col - 2]->color != color && board[pos.row - 1][pos.col - 2]->type == KNIGHT) return 1;
+	if(board[pos.row - 2][pos.col - 1])
+		if(board[pos.row - 2][pos.col - 1]->color != color && board[pos.row - 2][pos.col - 1]->type == KNIGHT) return 1;
+	if(board[pos.row - 2][pos.col + 1])
+		if(board[pos.row - 2][pos.col + 1]->color != color && board[pos.row - 2][pos.col + 1]->type == KNIGHT) return 1;
+	if(board[pos.row - 1][pos.col + 2])
+		if(board[pos.row - 1][pos.col + 2]->color != color && board[pos.row - 1][pos.col + 2]->type == KNIGHT) return 1;
+	
 	return 0;
 }
