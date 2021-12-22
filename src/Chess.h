@@ -83,7 +83,7 @@ private:
         int row, col;
     };
 
-    bool logical(Location past, Location present, PieceType type, PieceColor color);
+    bool logical(Location past, Location present);
     std::vector<Location> getOptions(Location past, PieceType type, PieceColor color);
     bool inCheck(PieceColor color);
     bool inCheck(Location pos, PieceColor color);
@@ -112,7 +112,7 @@ private:
     std::vector<Move> moveLog{Move()};
 
     std::vector<PieceType> whiteCaptured, blackCaptured;
-    Location whiteKing, blackKing;
+    Location whiteKing{7,4}, blackKing{0,4};
 
     SDL_Texture *charTexture[95];
     SDL_Texture *boardTexture{};

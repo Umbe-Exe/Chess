@@ -182,7 +182,6 @@ void Chess::movePiece(int32_t x, int32_t y) {
 	if(x > left && x < right && y > top && y < bottom)
 		if(movingPiece = board[i][j]) {
 			pos = movingPiece->position;
-			board[i][j] = nullptr;
 
 			SDL_SetRenderTarget(renderer, boardTexture);
 
@@ -211,31 +210,28 @@ void Chess::movePiece(int32_t x, int32_t y) {
 
 			movingPiece->position = align(movingPiece->position);
 
-			uint8_t
-				ic = (movingPiece->position.y - top) / sqSize,
-				jc = (movingPiece->position.x - left) / sqSize;
-			Piece *capturedPiece = board[ic][jc];
-			board[ic][jc] = 0;
+			if(movingPiece->position.x != INT_MAX) {
+				uint8_t
+					ic = (movingPiece->position.y - top) / sqSize,
+					jc = (movingPiece->position.x - left) / sqSize;
+				Piece *capturedPiece = board[ic][jc];
 
-			if(movingPiece->position.x != INT_MAX && logical({i, j}, {ic, jc}, movingPiece->type, movingPiece->color)) {
-				if(capturedPiece) {
+				if(logical({i, j}, {ic, jc})) {
+					if(capturedPiece) {
 
-					if((ic + jc) % 2) SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
-					else SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
+						if((ic + jc) % 2) SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
+						else SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
 
-					SDL_RenderFillRect(renderer, &capturedPiece->position);
+						SDL_RenderFillRect(renderer, &capturedPiece->position);
 
-					delete capturedPiece;
+						delete capturedPiece;
+					}
+					SDL_RenderCopy(renderer, movingPiece->image, 0, &movingPiece->position);
+				} else {
+					movingPiece->position = pos;
+					SDL_RenderCopy(renderer, movingPiece->image, 0, &pos);
+					board[i][j] = movingPiece;
 				}
-				SDL_RenderCopy(renderer, movingPiece->image, 0, &movingPiece->position);
-
-				board[ic][jc] = movingPiece;
-			} else {
-				SDL_RenderCopy(renderer, movingPiece->image, 0, &pos);
-
-				movingPiece->position = pos;
-				board[i][j] = movingPiece;
-				board[ic][jc] = capturedPiece;
 			}
 
 			SDL_SetRenderTarget(renderer, 0);
@@ -257,14 +253,23 @@ SDL_Rect Chess::align(SDL_Rect where) {
 	return where;
 }
 
-bool Chess::logical(Location past, Location present, PieceType type, PieceColor color) {
+bool Chess::logical(Location past, Location present) {
 
-	if(board[present.row][present.col]) if(board[present.row][present.col]->color == color) return false;
+	Piece *moving = board[past.row][past.col], 
+		*captured = board[present.row][present.col];
+	PieceColor color = moving->color;
+	PieceType type = moving->type;
+
+	if(captured) if(captured->color == color) return false;
 	if(turn != color) return false;
+
+	board[past.row][past.col] = 0;
+	board[present.row][present.col] = moving;
+
 	if(type != KING) if(inCheck(color)) return false;
 
 	if(type == PAWN) {
-		bool enPassant = 0;
+		bool enPassant = 0, promotion = 0;
 		Move lastMove = moveLog[moveLog.size() - 1];
 		if(being == color) {
 			if(past.row == 3) {
@@ -286,23 +291,24 @@ bool Chess::logical(Location past, Location present, PieceType type, PieceColor 
 			}
 		}
 		if(enPassant) {
-			Piece *capturedPiece = board[lastMove.after.row][lastMove.after.col];
+			captured = board[lastMove.after.row][lastMove.after.col];
 			board[lastMove.after.row][lastMove.after.col] = 0;
 			if(!inCheck((color == W ? whiteKing : blackKing), color)) {
 				if((lastMove.after.row + lastMove.after.col) % 2) SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
 				else SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
 
-				SDL_RenderFillRect(renderer, &capturedPiece->position);
+				SDL_RenderFillRect(renderer, &captured->position);
 
-				if(capturedPiece->color == W) whiteCaptured.push_back(PAWN);
+				if(captured->color == W) whiteCaptured.push_back(PAWN);
 				else blackCaptured.push_back(PAWN);
 
-				delete capturedPiece;
+				delete captured;
 				moveLog.push_back({past, present, type});
+				board[present.row][present.col] = moving;
 				turn = (PieceColor)!turn;
 				return true;
 			} //extremely rare case
-			board[lastMove.after.row][lastMove.after.col] = capturedPiece;
+			board[lastMove.after.row][lastMove.after.col] = captured;
 			return false;
 		}
 	} else if(type == KING) {
@@ -396,10 +402,13 @@ bool Chess::logical(Location past, Location present, PieceType type, PieceColor 
 			}
 
 			moveLog.push_back({past, present, type});
+			board[present.row][present.col] = moving;
 			turn = (PieceColor)!turn;
 			return true;
 		}
 	}
+
+	board[present.row][present.col] = captured;
 
 	std::vector<Location> options = getOptions(past, type, color);
 
@@ -426,7 +435,7 @@ bool Chess::logical(Location past, Location present, PieceType type, PieceColor 
 				} else {
 					rightCastleBlack = 0;
 					leftCastleBlack = 0;
-					blackKing = present
+					blackKing = present;
 				}
 			}
 
@@ -435,6 +444,7 @@ bool Chess::logical(Location past, Location present, PieceType type, PieceColor 
 				else blackCaptured.push_back(board[present.row][present.col]->type);
 			}
 			moveLog.push_back({past, present, type});
+			board[present.row][present.col] = moving;
 			turn = (PieceColor)!turn;
 			return true;
 		}
@@ -641,70 +651,84 @@ std::vector<Chess::Location> Chess::getOptions(Location past, PieceType type, Pi
 			}
 			break;
 		case KING:
-			if(board[past.row + 1][past.col]) {
-				if(board[past.row + 1][past.col]->color != color)
-					if(!inCheck({past.row + 1,past.col}, color))
-						loc.push_back({past.row + 1, past.col});
-			} else if(!inCheck({past.row + 1,past.col}, color))
-				loc.push_back({past.row + 1, past.col});
+			if(past.row < 7) {
+				if(board[past.row + 1][past.col]) {
+					if(board[past.row + 1][past.col]->color != color)
+						if(!inCheck({past.row + 1,past.col}, color))
+							loc.push_back({past.row + 1, past.col});
+				} else if(!inCheck({past.row + 1,past.col}, color))
+					loc.push_back({past.row + 1, past.col});
+			}
 
-			if(board[past.row - 1][past.col]) {
-				if(board[past.row - 1][past.col]->color != color)
-					if(!inCheck({past.row - 1,past.col}, color))
-						loc.push_back({past.row - 1, past.col});
-			} else if(!inCheck({past.row - 1,past.col}, color))
-				loc.push_back({past.row - 1, past.col});
+			if(past.row > 0) {
+				if(board[past.row - 1][past.col]) {
+					if(board[past.row - 1][past.col]->color != color)
+						if(!inCheck({past.row - 1,past.col}, color))
+							loc.push_back({past.row - 1, past.col});
+				} else if(!inCheck({past.row - 1,past.col}, color))
+					loc.push_back({past.row - 1, past.col});
+			}
 
-			if(board[past.row + 1][past.col + 1]) {
-				if(board[past.row + 1][past.col + 1]->color != color)
-					if(!inCheck({past.row + 1,past.col + 1}, color))
-						loc.push_back({past.row + 1, past.col + 1});
-			} else if(!inCheck({past.row + 1,past.col + 1}, color))
-				loc.push_back({past.row + 1, past.col + 1});
+			if(past.row < 7 && past.col < 7) {
+				if(board[past.row + 1][past.col + 1]) {
+					if(board[past.row + 1][past.col + 1]->color != color)
+						if(!inCheck({past.row + 1,past.col + 1}, color))
+							loc.push_back({past.row + 1, past.col + 1});
+				} else if(!inCheck({past.row + 1,past.col + 1}, color))
+					loc.push_back({past.row + 1, past.col + 1});
+			}
 
-			if(board[past.row + 1][past.col - 1]) {
-				if(board[past.row + 1][past.col - 1]->color != color)
-					if(!inCheck({past.row + 1,past.col - 1}, color))
-						loc.push_back({past.row + 1, past.col - 1});
-			} else if(!inCheck({past.row + 1,past.col - 1}, color))
-				loc.push_back({past.row + 1, past.col - 1});
+			if(past.row < 7 && past.col > 0) {
+				if(board[past.row + 1][past.col - 1]) {
+					if(board[past.row + 1][past.col - 1]->color != color)
+						if(!inCheck({past.row + 1,past.col - 1}, color))
+							loc.push_back({past.row + 1, past.col - 1});
+				} else if(!inCheck({past.row + 1,past.col - 1}, color))
+					loc.push_back({past.row + 1, past.col - 1});
+			}
 
-			if(board[past.row - 1][past.col + 1]) {
-				if(board[past.row - 1][past.col + 1]->color != color)
-					if(!inCheck({past.row - 1,past.col + 1}, color))
-						loc.push_back({past.row + 1, past.col + 1});
-			} else if(!inCheck({past.row - 1,past.col + 1}, color))
-				loc.push_back({past.row - 1, past.col + 1});
+			if(past.row > 0 && past.col < 7) {
+				if(board[past.row - 1][past.col + 1]) {
+					if(board[past.row - 1][past.col + 1]->color != color)
+						if(!inCheck({past.row - 1,past.col + 1}, color))
+							loc.push_back({past.row + 1, past.col + 1});
+				} else if(!inCheck({past.row - 1,past.col + 1}, color))
+					loc.push_back({past.row - 1, past.col + 1});
+			}
 
-			if(board[past.row - 1][past.col - 1]) {
-				if(board[past.row - 1][past.col - 1]->color != color)
-					if(!inCheck({past.row - 1,past.col - 1}, color))
-						loc.push_back({past.row - 1, past.col - 1});
-			} else if(!inCheck({past.row - 1,past.col - 1}, color))
-				loc.push_back({past.row - 1, past.col - 1});
+			if(past.row > 0 && past.col > 0) {
+				if(board[past.row - 1][past.col - 1]) {
+					if(board[past.row - 1][past.col - 1]->color != color)
+						if(!inCheck({past.row - 1,past.col - 1}, color))
+							loc.push_back({past.row - 1, past.col - 1});
+				} else if(!inCheck({past.row - 1,past.col - 1}, color))
+					loc.push_back({past.row - 1, past.col - 1});
+			}
 
-			if(board[past.row][past.col + 1]) {
-				if(board[past.row][past.col + 1]->color != color)
-					if(!inCheck({past.row,past.col + 1}, color))
-						loc.push_back({past.row, past.col + 1});
-			} else if(!inCheck({past.row,past.col + 1}, color))
-				loc.push_back({past.row, past.col + 1});
+			if(past.col < 7) {
+				if(board[past.row][past.col + 1]) {
+					if(board[past.row][past.col + 1]->color != color)
+						if(!inCheck({past.row,past.col + 1}, color))
+							loc.push_back({past.row, past.col + 1});
+				} else if(!inCheck({past.row,past.col + 1}, color))
+					loc.push_back({past.row, past.col + 1});
+			}
 
-			if(board[past.row][past.col - 1]) {
-				if(board[past.row][past.col - 1]->color != color)
-					if(!inCheck({past.row,past.col - 1}, color))
-						loc.push_back({past.row, past.col - 1});
-			} else if(!inCheck({past.row,past.col - 1}, color))
-				loc.push_back({past.row, past.col - 1});
+			if(past.col > 0) {
+				if(board[past.row][past.col - 1]) {
+					if(board[past.row][past.col - 1]->color != color)
+						if(!inCheck({past.row,past.col - 1}, color))
+							loc.push_back({past.row, past.col - 1});
+				} else if(!inCheck({past.row,past.col - 1}, color))
+					loc.push_back({past.row, past.col - 1});
+			}
 			break;
 	}
 	return loc;
 }
 
 bool Chess::inCheck(PieceColor color) {
-	Location pos = (color == W ? whiteKing : blackKing);
-
-	return inCheck(pos, color);
+	return inCheck((color == W ? whiteKing : blackKing), color);
 }
 
 bool Chess::inCheck(Location pos, PieceColor color) {
@@ -714,31 +738,39 @@ bool Chess::inCheck(Location pos, PieceColor color) {
 			else {
 				switch(board[pos.row - i][pos.col - i]->type) {
 					case PAWN:
+						if(i == 1)
+							return being == color;
 						break;
 					case BISHOP:
-						break;
 					case QUEEN:
+						return 1;
 						break;
 					case KING:
+						if(i == 1)
+							return 1;
 						break;
 				}
 				break;
 			}
 		}
-		
+
 	}
 	for(uint8_t i = 1; i <= (7 - pos.row < 7 - pos.col ? 7 - pos.row : 7 - pos.col); i++) {
 		if(board[pos.row + i][pos.col + i]) {
 			if(board[pos.row + i][pos.col + i]->color == color) break;
 			else {
-				switch(board[pos.row - i][pos.col - i]->type) {
+				switch(board[pos.row + i][pos.col + i]->type) {
 					case PAWN:
+						if(i == 1)
+							return being == color;
 						break;
 					case BISHOP:
-						break;
 					case QUEEN:
+						return 1;
 						break;
 					case KING:
+						if(i == 1)
+							return 1;
 						break;
 				}
 				break;
@@ -750,14 +782,18 @@ bool Chess::inCheck(Location pos, PieceColor color) {
 		if(board[pos.row + i][pos.col - i]) {
 			if(board[pos.row + i][pos.col - i]->color == color) break;
 			else {
-				switch(board[pos.row - i][pos.col - i]->type) {
+				switch(board[pos.row + i][pos.col - i]->type) {
 					case PAWN:
+						if(i == 1)
+							return being == color;
 						break;
 					case BISHOP:
-						break;
 					case QUEEN:
+						return 1;
 						break;
 					case KING:
+						if(i == 1)
+							return 1;
 						break;
 				}
 				break;
@@ -769,14 +805,18 @@ bool Chess::inCheck(Location pos, PieceColor color) {
 		if(board[pos.row - i][pos.col + i]) {
 			if(board[pos.row - i][pos.col + i]->color == color) break;
 			else {
-				switch(board[pos.row - i][pos.col - i]->type) {
+				switch(board[pos.row - i][pos.col + i]->type) {
 					case PAWN:
+						if(i == 1)
+							return being == color;
 						break;
 					case BISHOP:
-						break;
 					case QUEEN:
+						return 1;
 						break;
 					case KING:
+						if(i == 1)
+							return 1;
 						break;
 				}
 				break;
@@ -787,12 +827,14 @@ bool Chess::inCheck(Location pos, PieceColor color) {
 		if(board[pos.row - i][pos.col]) {
 			if(board[pos.row - i][pos.col]->color == color) break;
 			else {
-				switch(board[pos.row - i][pos.col - i]->type) {
+				switch(board[pos.row - i][pos.col]->type) {
 					case ROOK:
-						break;
 					case QUEEN:
+						return 1;
 						break;
 					case KING:
+						if(i == 1)
+							return 1;
 						break;
 				}
 				break;
@@ -803,12 +845,14 @@ bool Chess::inCheck(Location pos, PieceColor color) {
 		if(board[pos.row + i][pos.col]) {
 			if(board[pos.row + i][pos.col]->color == color) break;
 			else {
-				switch(board[pos.row - i][pos.col - i]->type) {
+				switch(board[pos.row + i][pos.col]->type) {
 					case ROOK:
-						break;
 					case QUEEN:
+						return 1;
 						break;
 					case KING:
+						if(i == 1)
+							return 1;
 						break;
 				}
 				break;
@@ -819,12 +863,14 @@ bool Chess::inCheck(Location pos, PieceColor color) {
 		if(board[pos.row][pos.col - i]) {
 			if(board[pos.row][pos.col - i]->color == color) break;
 			else {
-				switch(board[pos.row - i][pos.col - i]->type) {
+				switch(board[pos.row][pos.col - i]->type) {
 					case ROOK:
-						break;
 					case QUEEN:
+						return 1;
 						break;
 					case KING:
+						if(i == 1)
+							return 1;
 						break;
 				}
 				break;
@@ -835,35 +881,45 @@ bool Chess::inCheck(Location pos, PieceColor color) {
 		if(board[pos.row][pos.col + i]) {
 			if(board[pos.row][pos.col + i]->color == color) break;
 			else {
-				switch(board[pos.row - i][pos.col - i]->type) {
+				switch(board[pos.row][pos.col + i]->type) {
 					case ROOK:
-						break;
 					case QUEEN:
+						return 1;
 						break;
 					case KING:
+						if(i == 1)
+							return 1;
 						break;
 				}
 				break;
 			}
 		}
 	}
-	
-	if(board[pos.row + 1][pos.col - 2])
-		if(board[pos.row + 1][pos.col - 2]->color != color && board[pos.row + 1][pos.col - 2]->type == KNIGHT) return 1;
-	if(board[pos.row + 2][pos.col - 1])
-		if(board[pos.row + 2][pos.col - 1]->color != color && board[pos.row + 2][pos.col - 1]->type == KNIGHT) return 1;
-	if(board[pos.row + 2][pos.col + 1])
-		if(board[pos.row + 2][pos.col + 1]->color != color && board[pos.row + 2][pos.col + 1]->type == KNIGHT) return 1;
-	if(board[pos.row + 1][pos.col + 2])
-		if(board[pos.row + 1][pos.col + 2]->color != color && board[pos.row + 1][pos.col + 2]->type == KNIGHT) return 1;
-	if(board[pos.row - 1][pos.col - 2])
-		if(board[pos.row - 1][pos.col - 2]->color != color && board[pos.row - 1][pos.col - 2]->type == KNIGHT) return 1;
-	if(board[pos.row - 2][pos.col - 1])
-		if(board[pos.row - 2][pos.col - 1]->color != color && board[pos.row - 2][pos.col - 1]->type == KNIGHT) return 1;
-	if(board[pos.row - 2][pos.col + 1])
-		if(board[pos.row - 2][pos.col + 1]->color != color && board[pos.row - 2][pos.col + 1]->type == KNIGHT) return 1;
-	if(board[pos.row - 1][pos.col + 2])
-		if(board[pos.row - 1][pos.col + 2]->color != color && board[pos.row - 1][pos.col + 2]->type == KNIGHT) return 1;
-	
+
+	if(pos.row < 7 && pos.col > 1)
+		if(board[pos.row + 1][pos.col - 2])
+			if(board[pos.row + 1][pos.col - 2]->color != color && board[pos.row + 1][pos.col - 2]->type == KNIGHT) return 1;
+	if(pos.row < 6 && pos.col > 0)
+		if(board[pos.row + 2][pos.col - 1])
+			if(board[pos.row + 2][pos.col - 1]->color != color && board[pos.row + 2][pos.col - 1]->type == KNIGHT) return 1;
+	if(pos.row < 6 && pos.col < 7)
+		if(board[pos.row + 2][pos.col + 1])
+			if(board[pos.row + 2][pos.col + 1]->color != color && board[pos.row + 2][pos.col + 1]->type == KNIGHT) return 1;
+	if(pos.row < 7 && pos.col < 6)
+		if(board[pos.row + 1][pos.col + 2])
+			if(board[pos.row + 1][pos.col + 2]->color != color && board[pos.row + 1][pos.col + 2]->type == KNIGHT) return 1;
+	if(pos.row > 0 && pos.col > 1)
+		if(board[pos.row - 1][pos.col - 2])
+			if(board[pos.row - 1][pos.col - 2]->color != color && board[pos.row - 1][pos.col - 2]->type == KNIGHT) return 1;
+	if(pos.row > 1 && pos.col > 0)
+		if(board[pos.row - 2][pos.col - 1])
+			if(board[pos.row - 2][pos.col - 1]->color != color && board[pos.row - 2][pos.col - 1]->type == KNIGHT) return 1;
+	if(pos.row > 1 && pos.col < 7)
+		if(board[pos.row - 2][pos.col + 1])
+			if(board[pos.row - 2][pos.col + 1]->color != color && board[pos.row - 2][pos.col + 1]->type == KNIGHT) return 1;
+	if(pos.row > 0 && pos.col < 6)
+		if(board[pos.row - 1][pos.col + 2])
+			if(board[pos.row - 1][pos.col + 2]->color != color && board[pos.row - 1][pos.col + 2]->type == KNIGHT) return 1;
+
 	return 0;
 }
