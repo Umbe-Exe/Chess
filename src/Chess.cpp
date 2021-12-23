@@ -3,7 +3,7 @@
 void Chess::loadCharacters() {
 	TTF_Init();
 
-	TTF_Font *font = TTF_OpenFont("../../font/FreeMonoBold.ttf", 100);
+	TTF_Font *font = TTF_OpenFont("font/FreeMonoBold.ttf", 100);
 
 	char str[2] = {' ', '\0'};
 	SDL_Color color = {0, 0, 0};
@@ -18,18 +18,18 @@ void Chess::loadCharacters() {
 }
 
 void Chess::loadImages() {
-	pieceTexture[PAWN + W] = load_texture("../../img/pawnW.png");
-	pieceTexture[PAWN + B] = load_texture("../../img/pawnB.png");
-	pieceTexture[BISHOP + W] = load_texture("../../img/bishopW.png");
-	pieceTexture[BISHOP + B] = load_texture("../../img/bishopB.png");
-	pieceTexture[KNIGHT + W] = load_texture("../../img/knightW.png");
-	pieceTexture[KNIGHT + B] = load_texture("../../img/knightB.png");
-	pieceTexture[ROOK + W] = load_texture("../../img/rookW.png");
-	pieceTexture[ROOK + B] = load_texture("../../img/rookB.png");
-	pieceTexture[QUEEN + W] = load_texture("../../img/queenW.png");
-	pieceTexture[QUEEN + B] = load_texture("../../img/queenB.png");
-	pieceTexture[KING + W] = load_texture("../../img/kingW.png");
-	pieceTexture[KING + B] = load_texture("../../img/kingB.png");
+	pieceTexture[PAWN + W] = load_texture("img/pawnW.png");
+	pieceTexture[PAWN + B] = load_texture("img/pawnB.png");
+	pieceTexture[BISHOP + W] = load_texture("img/bishopW.png");
+	pieceTexture[BISHOP + B] = load_texture("img/bishopB.png");
+	pieceTexture[KNIGHT + W] = load_texture("img/knightW.png");
+	pieceTexture[KNIGHT + B] = load_texture("img/knightB.png");
+	pieceTexture[ROOK + W] = load_texture("img/rookW.png");
+	pieceTexture[ROOK + B] = load_texture("img/rookB.png");
+	pieceTexture[QUEEN + W] = load_texture("img/queenW.png");
+	pieceTexture[QUEEN + B] = load_texture("img/queenB.png");
+	pieceTexture[KING + W] = load_texture("img/kingW.png");
+	pieceTexture[KING + B] = load_texture("img/kingB.png");
 };
 
 SDL_Texture *Chess::load_texture(char const *path) {
