@@ -40,15 +40,12 @@ public:
     }
 
     ~Chess() {
-        for(uint8_t i = 0; i < 8; i++)
-            for(uint8_t j = 0; j < 8; j++)
-                if(board[i][j]) delete board[i][j];
-
         SDL_DestroyTexture(boardTexture);
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
 
         for(auto &i : charTexture) SDL_DestroyTexture(i);
+        for(auto &i : pieceTexture) SDL_DestroyTexture(i);
 
         SDL_Quit();
     }
@@ -57,52 +54,47 @@ private:
 
     void loadCharacters();
     void loadImages();
+    SDL_Texture *load_texture(char const *path);
+
     void createBoard();
     void drawBoard();
+
     void movePiece(int32_t x, int32_t y);
-    SDL_Rect align(SDL_Rect where);
-    SDL_Texture *load_texture(char const *path);
+
+    uint8_t getRow(uint16_t y);
+    uint8_t getCol(uint16_t x);
+    SDL_Rect getRect(uint8_t row, uint8_t col);
     
     SDL_Window *window{};
     SDL_Renderer *renderer{};
 
+    SDL_Texture *charTexture[95];
+    SDL_Texture *pieceTexture[12];
+
+    SDL_Texture *boardTexture{};
+    uint16_t top, left, sqSize;
+
     enum PieceType {
-        PAWN,
-        BISHOP,
-        KNIGHT,
-        ROOK,
-        QUEEN,
-        KING
+        PAWN = 0,
+        BISHOP = 2,
+        KNIGHT = 4,
+        ROOK = 6,
+        QUEEN = 8,
+        KING = 10,
+        NONE = 12
     };
 
     enum PieceColor {
-        B, W
+        B = 0, W
     };
 
     struct Location {
         int row, col;
     };
 
-    bool logical(Location past, Location present);
-    std::vector<Location> getOptions(Location past, PieceType type, PieceColor color);
-    bool inCheck(PieceColor color);
-    bool inCheck(Location pos, PieceColor color);
-
-    struct Piece {
-        PieceType type;
-        PieceColor color;
-
-        SDL_Texture *image{};
-        SDL_Rect position{};
-
-        Piece(PieceType type, PieceColor color) {
-            this->type = type;
-            this->color = color;
-        }
-        ~Piece() {
-            if(image) SDL_DestroyTexture(image);
-        }
-    };
+    bool logical(Location from, Location to);
+    std::vector<Location> getOptions(Location from, PieceType type, PieceColor color);
+    bool inCheck(Location loc, PieceColor color);
 
     struct Move {
         Location before, after;
@@ -111,30 +103,23 @@ private:
 
     std::vector<Move> moveLog{Move()};
 
-    std::vector<PieceType> whiteCaptured, blackCaptured;
+    std::vector<uint8_t> whiteCaptured, blackCaptured;
     Location whiteKing{7,4}, blackKing{0,4};
-
-    SDL_Texture *charTexture[95];
-    SDL_Texture *boardTexture{};
-
-    uint16_t top, bottom, left, right, sqSize;
 
     PieceColor turn = W;
     PieceColor being = W;
 
     bool leftCastleWhite = 1, leftCastleBlack = 1, rightCastleWhite = 1, rightCastleBlack = 1;
 
-    Piece *board[8][8] = {
-
-        {new Piece(ROOK, B),new Piece(KNIGHT, B),new Piece(BISHOP, B),new Piece(QUEEN, B),new Piece(KING, B),new Piece(BISHOP, B),new Piece(KNIGHT, B),new Piece(ROOK, B)},
-        {new Piece(PAWN, B),new Piece(PAWN, B),new Piece(PAWN, B),new Piece(PAWN, B),new Piece(PAWN, B),new Piece(PAWN, B),new Piece(PAWN, B),new Piece(PAWN, B)},
-        {nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr},
-        {nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr},
-        {nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr},
-        {nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr},
-        {new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W),new Piece(PAWN, W)},
-        {new Piece(ROOK, W),new Piece(KNIGHT, W),new Piece(BISHOP, W),new Piece(QUEEN, W),new Piece(KING, W),new Piece(BISHOP, W),new Piece(KNIGHT, W),new Piece(ROOK, W)}
-
+    uint8_t board[8][8] = {
+        {ROOK + B,KNIGHT + B,BISHOP + B,QUEEN + B,KING + B,BISHOP + B,KNIGHT + B,ROOK + B},
+        {PAWN + B,PAWN + B,PAWN + B,PAWN + B,PAWN + B,PAWN + B,PAWN + B,PAWN + B},
+        {NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE},
+        {NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE},
+        {NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE},
+        {NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE},
+        {PAWN + W,PAWN + W,PAWN + W,PAWN + W,PAWN + W,PAWN + W,PAWN + W,PAWN + W},
+        {ROOK + W,KNIGHT + W,BISHOP + W,QUEEN + W,KING + W,BISHOP + W,KNIGHT + W,ROOK + W}
     };
 
 };
