@@ -3,12 +3,13 @@
 void Chess::loadCharacters() {
 	TTF_Init();
 
-	TTF_Font *font;
-	font = TTF_OpenFont("../../font/FreeMonoBold.ttf", 100);
+	TTF_Font *font = TTF_OpenFont("../../font/FreeMonoBold.ttf", 100);
 
+	char str[2] = {' ', '\0'};
 	SDL_Color color = {0, 0, 0};
 	for(uint8_t i = 0; i < 95; i++) {
-		SDL_Surface *character = TTF_RenderText_Solid(font, (std::string("") += (i + 32)).c_str(), color);
+		str[0] = i + 32;
+		SDL_Surface *character = TTF_RenderText_Solid(font, str, color);
 
 		charTexture[i] = SDL_CreateTextureFromSurface(renderer, character);
 		SDL_FreeSurface(character);
