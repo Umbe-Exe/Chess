@@ -96,6 +96,11 @@ private:
     std::vector<Location> getOptions(Location from, PieceType type, PieceColor color);
     bool inCheck(Location loc, PieceColor color);
 
+    bool longCastleRight(Location from, PieceColor color);
+    bool longCastleLeft(Location from, PieceColor color);
+    bool shortCastleRight(Location from, PieceColor color);
+    bool shortCastleLeft(Location from, PieceColor color);
+
     struct Move {
         Location before, after;
         PieceType type;
