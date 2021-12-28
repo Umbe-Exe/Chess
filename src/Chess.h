@@ -17,6 +17,8 @@ public:
         loadCharacters();
         loadImages();
         createBoard();
+        createPieces();
+
         drawBoard();
     }
 
@@ -27,13 +29,14 @@ public:
             switch(event.type) {
                 case SDL_WINDOWEVENT:
                     if(event.window.event == SDL_WINDOWEVENT_RESIZED) {
-                        SDL_DestroyTexture(boardTexture);
                         createBoard();
+                        createPieces();
                         drawBoard();
                     }
                     break;
                 case SDL_MOUSEBUTTONDOWN:
                     movePiece(event.button.x, event.button.y);
+                    drawBoard();
                     break;
             }
         } while(event.type != SDL_QUIT);
@@ -41,6 +44,7 @@ public:
 
     ~Chess() {
         SDL_DestroyTexture(boardTexture);
+        SDL_DestroyTexture(piecesTexture);
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
 
@@ -57,6 +61,8 @@ private:
     SDL_Texture *load_texture(char const *path);
 
     void createBoard();
+    void createPieces();
+
     void drawBoard();
 
     void movePiece(int32_t x, int32_t y);
@@ -72,6 +78,7 @@ private:
     SDL_Texture *pieceTexture[12];
 
     SDL_Texture *boardTexture{};
+    SDL_Texture *piecesTexture{};
     uint16_t top, left, sqSize;
 
     enum PieceType {

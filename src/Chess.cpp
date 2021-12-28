@@ -58,6 +58,7 @@ void Chess::createBoard() {
 
 	uint16_t lineWidth = sqSize * 50 / 100;
 
+	SDL_DestroyTexture(boardTexture);
 	boardTexture = SDL_CreateTexture(renderer, SDL_GetWindowPixelFormat(window), SDL_TEXTUREACCESS_TARGET, w, h);
 	SDL_SetRenderTarget(renderer, boardTexture);
 
@@ -68,7 +69,7 @@ void Chess::createBoard() {
 	line[2] = {leftPadd + sqSize * 8 + lineWidth,topPadd + sqSize * 8 + lineWidth,-lineWidth,-(sqSize * 8 + lineWidth * 2)};
 	line[3] = {leftPadd + sqSize * 8 + lineWidth,topPadd + sqSize * 8 + lineWidth,-(sqSize * 8 + lineWidth * 2),-lineWidth};
 
-	SDL_SetRenderDrawColor(renderer, 127, 127, 127, 1);
+	SDL_SetRenderDrawColor(renderer, 127, 127, 127, 255);
 	SDL_RenderFillRects(renderer, line, 4);
 
 	for(uint8_t j = 0; j < 8; j++) {
@@ -83,16 +84,14 @@ void Chess::createBoard() {
 			};
 
 			if(white) {
-				SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
+				SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 				white = 0;
 			} else {
-				SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
+				SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 				white = 1;
 			}
 
 			SDL_RenderFillRect(renderer, &square);
-
-			if(board[j][i] != NONE) SDL_RenderCopy(renderer, pieceTexture[board[j][i]], 0, &square);
 		}
 	}
 
@@ -135,8 +134,33 @@ void Chess::createBoard() {
 	SDL_SetRenderTarget(renderer, 0);
 }
 
+void Chess::createPieces() {
+	int w, h;
+	SDL_GetWindowSize(window, &w, &h);
+
+	SDL_DestroyTexture(piecesTexture);
+	piecesTexture = SDL_CreateTexture(renderer, SDL_GetWindowPixelFormat(window), SDL_TEXTUREACCESS_TARGET, w, h);
+	SDL_SetTextureBlendMode(piecesTexture, SDL_BLENDMODE_BLEND);
+	SDL_SetRenderTarget(renderer, piecesTexture);
+
+	for(uint8_t j = 0; j < 8; j++) {
+		for(uint8_t i = 0; i < 8; i++) {
+			SDL_Rect square = {
+				left + sqSize * i,
+				top + sqSize * j,
+				sqSize,
+				sqSize
+			};
+
+			if(board[j][i] != NONE) SDL_RenderCopy(renderer, pieceTexture[board[j][i]], 0, &square);
+		}
+	}
+	SDL_SetRenderTarget(renderer, 0);
+}
+
 void Chess::drawBoard() {
 	SDL_RenderCopy(renderer, boardTexture, 0, 0);
+	SDL_RenderCopy(renderer, piecesTexture, 0, 0);
 	SDL_RenderPresent(renderer);
 }
 
@@ -150,13 +174,13 @@ void Chess::movePiece(int32_t x, int32_t y) {
 		if(board[i][j] != NONE) {
 			SDL_Rect rect = getRect(i, j);
 
-			SDL_SetRenderTarget(renderer, boardTexture);
-
-			if((i + j) % 2) SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
-			else SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
-
+			SDL_SetRenderTarget(renderer, piecesTexture);
+			SDL_SetTextureBlendMode(piecesTexture, SDL_BLENDMODE_NONE);
+			SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 			SDL_RenderFillRect(renderer, &rect);
+
 			SDL_SetRenderTarget(renderer, 0);
+			SDL_SetTextureBlendMode(piecesTexture, SDL_BLENDMODE_BLEND);
 
 			SDL_Event event;
 			do {
@@ -168,12 +192,14 @@ void Chess::movePiece(int32_t x, int32_t y) {
 					rect.y += event.motion.yrel;
 
 					SDL_RenderCopy(renderer, boardTexture, 0, 0);
+					SDL_RenderCopy(renderer, piecesTexture, 0, 0);
 					SDL_RenderCopy(renderer, pieceTexture[board[i][j]], 0, &rect);
 					SDL_RenderPresent(renderer);
 				}
 			} while(event.type != SDL_MOUSEBUTTONUP && event.window.event != SDL_WINDOWEVENT_LEAVE);
 
-			SDL_SetRenderTarget(renderer, boardTexture);
+			SDL_SetRenderTarget(renderer, piecesTexture);
+			SDL_SetTextureBlendMode(piecesTexture, SDL_BLENDMODE_NONE);
 
 			uint8_t
 				ic = getRow(rect.y + sqSize / 2),
@@ -183,9 +209,7 @@ void Chess::movePiece(int32_t x, int32_t y) {
 			if(logical({i, j}, {ic, jc})) {
 				if(board[ic][jc] != NONE) {
 
-					if((ic + jc) % 2) SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
-					else SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
-
+					SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 					SDL_RenderFillRect(renderer, &rect);
 				}
 				SDL_RenderCopy(renderer, pieceTexture[board[i][j]], 0, &rect);
@@ -197,8 +221,7 @@ void Chess::movePiece(int32_t x, int32_t y) {
 			}
 
 			SDL_SetRenderTarget(renderer, 0);
-			SDL_RenderCopy(renderer, boardTexture, 0, 0);
-			SDL_RenderPresent(renderer);
+			SDL_SetTextureBlendMode(piecesTexture, SDL_BLENDMODE_BLEND);
 		}
 	}
 }
@@ -271,8 +294,7 @@ bool Chess::logical(Location from, Location to) {
 			board[from.row][from.col] = NONE;
 			board[lastMove.after.row][lastMove.after.col] = NONE;
 			if(!inCheck((movingColor == W ? whiteKing : blackKing), movingColor)) {
-				if((lastMove.after.row + lastMove.after.col) % 2) SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
-				else SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
+				SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 
 				SDL_Rect rect = getRect(lastMove.after.row, lastMove.after.col);
 				SDL_RenderFillRect(renderer, &rect);
@@ -356,8 +378,7 @@ bool Chess::logical(Location from, Location to) {
 			}
 
 			if(castleLeft) {
-				if(to.row == 7) SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
-				else SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
+				SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 
 				SDL_Rect rect = getRect(to.row, 0);
 				SDL_RenderFillRect(renderer, &rect);
@@ -368,8 +389,7 @@ bool Chess::logical(Location from, Location to) {
 				rect = getRect(to.row, to.col + 1);
 				SDL_RenderCopy(renderer, pieceTexture[board[to.row][to.col + 1]], 0, &rect);
 			} else {
-				if(to.row == 0) SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
-				else SDL_SetRenderDrawColor(renderer, 255, 255, 255, 1);
+				SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 				
 				SDL_Rect rect = getRect(to.row, 7);
 				SDL_RenderFillRect(renderer, &rect);
