@@ -38,7 +38,7 @@ SDL_Texture *Chess::load_texture(char const *path) {
 
 void Chess::createBoard() {
 
-	int w, h, leftPadd, topPadd, rightPadd, bottomPadd;
+	int leftPadd, topPadd, rightPadd, bottomPadd;
 	bool white = 0;
 	SDL_Rect square, lineSec;
 
@@ -135,8 +135,6 @@ void Chess::createBoard() {
 }
 
 void Chess::createPieces() {
-	int w, h;
-	SDL_GetWindowSize(window, &w, &h);
 
 	SDL_DestroyTexture(piecesTexture);
 	piecesTexture = SDL_CreateTexture(renderer, SDL_GetWindowPixelFormat(window), SDL_TEXTUREACCESS_TARGET, w, h);
@@ -924,6 +922,42 @@ void Chess::rotateBoard() {
 			board[k][l] = board[i][j];
 			board[i][j] = tmp;
 		}
+
+	if(rotationAnim) {
+		SDL_Rect rect;
+		float delta = 0.05, start = 1;
+		for(uint16_t i = 1; i < 91; i++) {
+			start += delta;
+			rect = {
+				(w / 2) - (int)((float)w / 2 / start),
+				(h / 2) - (int)((float)h / 2 / start),
+				(int)((float)w / start),
+				(int)((float)h / start)
+			};
+
+			SDL_RenderClear(renderer);
+			SDL_RenderCopyEx(renderer, boardTexture, 0, &rect, i, 0, SDL_FLIP_NONE);
+			SDL_RenderCopyEx(renderer, piecesTexture, 0, &rect, i, 0, SDL_FLIP_NONE);
+			SDL_RenderPresent(renderer);
+			SDL_Delay(10);
+		}
+		for(uint16_t i = 91; i < 181; i++) {
+			start -= delta;
+			rect = {
+				(w / 2) - (int)((float)w / 2 / start),
+				(h / 2) - (int)((float)h / 2 / start),
+				(int)((float)w / start),
+				(int)((float)h / start)
+			};
+
+			SDL_RenderClear(renderer);
+			SDL_RenderCopyEx(renderer, boardTexture, 0, &rect, i, 0, SDL_FLIP_NONE);
+			SDL_RenderCopyEx(renderer, piecesTexture, 0, &rect, i, 0, SDL_FLIP_NONE);
+			SDL_RenderPresent(renderer);
+			SDL_Delay(10);
+		}
+	}
+
 	createPieces();
 	drawBoard();
 }

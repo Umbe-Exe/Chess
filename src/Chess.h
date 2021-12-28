@@ -127,6 +127,9 @@ private:
     PieceColor turn = W;
     PieceColor being = W;
     bool rotate = 1;
+    bool rotationAnim = 1;
+
+    int w, h;
 
     bool leftCastleWhite = 1, leftCastleBlack = 1, rightCastleWhite = 1, rightCastleBlack = 1;
 
