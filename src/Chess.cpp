@@ -916,12 +916,17 @@ bool Chess::shortCastleLeft(Location from, PieceColor color) {
 
 void Chess::rotateBoard() {
 	uint8_t tmp;
-	for(uint8_t i = 7, k = 0; i > 3; i--, k++)
-		for(uint8_t j = 7, l = 0; j < 255; j--, l++) {
-			tmp = board[k][l];
-			board[k][l] = board[i][j];
+	for(uint8_t i = 7; i > 3; i--)
+		for(uint8_t j = 7; j < 255; j--) {
+			tmp = board[7 - i][7 - j];
+			board[7 - i][7 - j] = board[i][j];
 			board[i][j] = tmp;
 		}
+
+	whiteKing.row = 7 - whiteKing.row;
+	whiteKing.col = 7 - whiteKing.col;
+	blackKing.row = 7 - blackKing.row;
+	blackKing.col = 7 - blackKing.col;
 
 	if(rotationAnim) {
 		SDL_Rect rect;
