@@ -915,3 +915,15 @@ bool Chess::shortCastleLeft(Location from, PieceColor color) {
 	return board[from.row][from.col - 1] == NONE && board[from.row][from.col - 2] == NONE &&
 		!inCheck({from.row,from.col}, color) && !inCheck({from.row,from.col - 1}, color) && !inCheck({from.row,from.col - 2}, color);
 }
+
+void Chess::rotateBoard() {
+	uint8_t tmp;
+	for(uint8_t i = 7, k = 0; i > 3; i--, k++)
+		for(uint8_t j = 7, l = 0; j < 255; j--, l++) {
+			tmp = board[k][l];
+			board[k][l] = board[i][j];
+			board[i][j] = tmp;
+		}
+	createPieces();
+	drawBoard();
+}

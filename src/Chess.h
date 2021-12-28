@@ -37,6 +37,10 @@ public:
                 case SDL_MOUSEBUTTONDOWN:
                     movePiece(event.button.x, event.button.y);
                     drawBoard();
+                    if(rotate && turn != being) {
+                        being = turn;
+                        rotateBoard();
+                    }
                     break;
             }
         } while(event.type != SDL_QUIT);
@@ -108,6 +112,8 @@ private:
     bool shortCastleRight(Location from, PieceColor color);
     bool shortCastleLeft(Location from, PieceColor color);
 
+    void rotateBoard();
+
     struct Move {
         Location before, after;
         PieceType type;
@@ -120,6 +126,7 @@ private:
 
     PieceColor turn = W;
     PieceColor being = W;
+    bool rotate = 1;
 
     bool leftCastleWhite = 1, leftCastleBlack = 1, rightCastleWhite = 1, rightCastleBlack = 1;
 
