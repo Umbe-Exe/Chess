@@ -276,7 +276,10 @@ bool Chess::logical(Location from, Location to) {
 					} else if(lastMove.after.col == from.col - 1) {
 						if(from.row - 1 == to.row && to.col == from.col - 1) enPassant = 1;
 					}
-			}
+			} else if(to.row == 0)
+				if(board[to.row][from.col] == NONE && to.col == from.col ||
+				   board[to.row][from.col - 1] != NONE && to.col == from.col - 1 ||
+				   board[to.row][from.col + 1] != NONE && to.col == from.col + 1) promotion = 1;
 		} else {
 			if(from.row == 4) {
 				if(lastMove.type == PAWN && lastMove.after.row == 4)
@@ -285,11 +288,15 @@ bool Chess::logical(Location from, Location to) {
 					} else if(lastMove.after.col == from.col - 1) {
 						if(from.row + 1 == to.row && to.col == from.col - 1) enPassant = 1;
 					}
-			}
+			} else if(to.row == 7)
+				if(board[to.row][from.col] == NONE && to.col == from.col ||
+				   board[to.row][from.col - 1] != NONE && to.col == from.col - 1 ||
+				   board[to.row][from.col + 1] != NONE && to.col == from.col + 1) promotion = 1;
 		}
 		if(enPassant) {
 			captured = board[lastMove.after.row][lastMove.after.col];
 			board[from.row][from.col] = NONE;
+			board[to.row][to.col] = moving;
 			board[lastMove.after.row][lastMove.after.col] = NONE;
 			if(!inCheck((movingColor == W ? whiteKing : blackKing), movingColor)) {
 				SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
@@ -305,8 +312,62 @@ bool Chess::logical(Location from, Location to) {
 				turn = (PieceColor)!turn;
 				return true;
 			}
+			board[to.row][to.col] = NONE;
 			board[from.row][from.col] = moving;
 			board[lastMove.after.row][lastMove.after.col] = captured;
+			return false;
+		} else if(promotion) {
+
+			board[from.row][from.col] = NONE;
+			board[to.row][to.col] = moving;
+			if(!inCheck((movingColor == W ? whiteKing : blackKing), movingColor)) {
+
+				SDL_Rect rect = {
+					left + sqSize + sqSize / 2,
+					top + sqSize * 3,
+					sqSize * 5,
+					sqSize * 2
+				};
+				SDL_SetRenderTarget(renderer, 0);
+				SDL_SetRenderDrawColor(renderer, 127, 127, 127, 255);
+				SDL_RenderFillRect(renderer, &rect);
+
+				rect = {
+					left + sqSize * 2,
+					top + sqSize * 3 + sqSize / 2,
+					sqSize,
+					sqSize
+				};
+				SDL_RenderCopy(renderer, pieceTexture[QUEEN + movingColor], 0, &rect);
+				rect.x = left + sqSize * 3;
+				SDL_RenderCopy(renderer, pieceTexture[ROOK + movingColor], 0, &rect);
+				rect.x = left + sqSize * 4;
+				SDL_RenderCopy(renderer, pieceTexture[BISHOP + movingColor], 0, &rect);
+				rect.x = left + sqSize * 5;
+				SDL_RenderCopy(renderer, pieceTexture[KNIGHT + movingColor], 0, &rect);
+				SDL_RenderPresent(renderer);
+				SDL_SetRenderTarget(renderer, piecesTexture);
+
+				PieceType chosen = NONE;
+				SDL_Event event;
+				do {
+					SDL_WaitEvent(&event);
+					
+					switch(event.type) {
+						case SDL_MOUSEBUTTONDOWN:
+							chosen = choice(event.button.x, event.button.y);
+							break;
+						case SDL_QUIT: delete this;
+					}
+				} while(chosen == NONE);
+
+				board[from.row][from.col] = chosen + movingColor;
+				moveLog.push_back({from, to, chosen});
+				turn = (PieceColor)!turn;
+				return true;
+			}
+			board[to.row][to.col] = captured;
+			board[from.row][from.col] = moving;
 			return false;
 		}
 	} else if(movingType == KING) {
@@ -444,6 +505,18 @@ bool Chess::logical(Location from, Location to) {
 		}
 
 	return false;
+}
+
+Chess::PieceType Chess::choice(int32_t x, int32_t y) {
+
+	if(y > top + sqSize * 3 + sqSize / 2 && y < top + sqSize * 4 + sqSize / 2 && x > left + sqSize * 2 && x < left + sqSize * 6) {
+		x -= left + sqSize * 2;
+		if(x < sqSize) return QUEEN;
+		else if(x > sqSize && x < sqSize * 2) return ROOK;
+		else if(x > sqSize * 2 && x < sqSize * 3) return BISHOP;
+		else if(x > sqSize * 3 && x < sqSize * 4) return KNIGHT;
+	}
+	return NONE;
 }
 
 std::vector<Chess::Location> Chess::getOptions(Location from, PieceType type, PieceColor color) {
@@ -930,7 +1003,7 @@ void Chess::rotateBoard() {
 
 	if(rotationAnim) {
 		SDL_Rect rect;
-		float delta = 0.05, start = 1;
+		float delta = 0.01f, start = 1;
 		for(uint16_t i = 1; i < 91; i++) {
 			start += delta;
 			rect = {

@@ -106,6 +106,7 @@ private:
     bool logical(Location from, Location to);
     std::vector<Location> getOptions(Location from, PieceType type, PieceColor color);
     bool inCheck(Location loc, PieceColor color);
+    PieceType choice(int32_t x, int32_t y);
 
     bool longCastleRight(Location from, PieceColor color);
     bool longCastleLeft(Location from, PieceColor color);
@@ -126,7 +127,7 @@ private:
 
     PieceColor turn = W;
     PieceColor being = W;
-    bool rotate = 1;
+    bool rotate = 0;
     bool rotationAnim = 1;
 
     int w, h;
