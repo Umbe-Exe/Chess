@@ -745,7 +745,7 @@ std::vector<Chess::Location> Chess::getOptions(Location from, PieceType type, Pi
 			if(from.row > 0 && from.col < 7) {
 				if(board[from.row - 1][from.col + 1] != NONE) {
 					if(board[from.row - 1][from.col + 1] % 2 != color)
-						loc.push_back({from.row + 1, from.col + 1});
+						loc.push_back({from.row - 1, from.col + 1});
 				} else loc.push_back({from.row - 1, from.col + 1});
 			}
 
