@@ -13,7 +13,7 @@ public:
         SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO | SDL_INIT_EVENTS);
         window = SDL_CreateWindow("Chess", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_RESIZABLE);
         renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE);
-
+ 
         loadCharacters();
         loadImages();
         createBoard();
@@ -115,9 +115,19 @@ private:
 
     void rotateBoard();
 
+    enum MoveType {
+        NORMAL, PROMOTION, CASTLING
+    };
+
     struct Move {
         Location before, after;
-        PieceType type;
+        PieceType moved, captured;
+        std::string notation;
+
+        Move(PieceColor being, Location before, Location after, PieceType moved, PieceType captured, MoveType type = NORMAL, PieceType become = NONE);
+        Move() {
+            notation = "init";
+        };
     };
 
     std::vector<Move> moveLog{Move()};
@@ -133,6 +143,8 @@ private:
     int w, h;
 
     bool leftCastleWhite = 1, leftCastleBlack = 1, rightCastleWhite = 1, rightCastleBlack = 1;
+
+    uint32_t whiteTimer, blackTimer;
 
     uint8_t board[8][8] = {
         {ROOK + B,KNIGHT + B,BISHOP + B,QUEEN + B,KING + B,BISHOP + B,KNIGHT + B,ROOK + B},

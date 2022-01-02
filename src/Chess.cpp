@@ -238,7 +238,7 @@ SDL_Rect Chess::getRect(uint8_t row, uint8_t col) {
 
 bool Chess::logical(Location from, Location to) {
 
-	if(to.row > 7 || to.row < 0 || to.col>7 || to.col < 0) return false;
+	if(to.row > 7 || to.row < 0 || to.col > 7 || to.col < 0) return false;
 
 	uint8_t 
 		moving = board[from.row][from.col], 
@@ -270,7 +270,7 @@ bool Chess::logical(Location from, Location to) {
 		Move lastMove = moveLog[moveLog.size() - 1];
 		if(being == movingColor) {
 			if(from.row == 3) {
-				if(lastMove.type == PAWN && lastMove.after.row == 3)
+				if(lastMove.moved == PAWN && lastMove.after.row == 3)
 					if(lastMove.after.col == from.col + 1) {
 						if(from.row - 1 == to.row && to.col == from.col + 1) enPassant = 1;
 					} else if(lastMove.after.col == from.col - 1) {
@@ -282,7 +282,7 @@ bool Chess::logical(Location from, Location to) {
 				   board[to.row][from.col + 1] != NONE && to.col == from.col + 1) promotion = 1;
 		} else {
 			if(from.row == 4) {
-				if(lastMove.type == PAWN && lastMove.after.row == 4)
+				if(lastMove.moved == PAWN && lastMove.after.row == 4)
 					if(lastMove.after.col == from.col + 1) {
 						if(from.row + 1 == to.row && to.col == from.col + 1) enPassant = 1;
 					} else if(lastMove.after.col == from.col - 1) {
@@ -308,7 +308,7 @@ bool Chess::logical(Location from, Location to) {
 				else blackCaptured.push_back(PAWN);
 
 				board[from.row][from.col] = moving;
-				moveLog.push_back({from, to, movingType});
+				moveLog.push_back(Move(being, from, to, PAWN, NONE));
 				turn = (PieceColor)!turn;
 				return true;
 			}
@@ -362,7 +362,7 @@ bool Chess::logical(Location from, Location to) {
 				} while(chosen == NONE);
 
 				board[from.row][from.col] = chosen + movingColor;
-				moveLog.push_back({from, to, chosen});
+				moveLog.push_back(Move(being, from, to, PAWN, capturedType, PROMOTION, chosen));
 				turn = (PieceColor)!turn;
 				return true;
 			}
@@ -460,7 +460,7 @@ bool Chess::logical(Location from, Location to) {
 				SDL_RenderCopy(renderer, pieceTexture[board[to.row][to.col - 1]], 0, &rect);
 			}
 
-			moveLog.push_back({from, to, movingType});
+			moveLog.push_back(Move(being, from, to, KING, NONE, CASTLING));
 			turn = (PieceColor)!turn;
 			return true;
 		}
@@ -499,7 +499,7 @@ bool Chess::logical(Location from, Location to) {
 				if(capturedColor == W) whiteCaptured.push_back(capturedType);
 				else blackCaptured.push_back(capturedType);
 			}
-			moveLog.push_back({from, to, movingType});
+			moveLog.push_back(Move(being, from, to, movingType, capturedType));
 			turn = (PieceColor)!turn;
 			return true;
 		}
@@ -1038,4 +1038,89 @@ void Chess::rotateBoard() {
 
 	createPieces();
 	drawBoard();
+}
+
+Chess::Move::Move(PieceColor being, Location before, Location after, PieceType moved, PieceType captured, MoveType type, PieceType become)
+	: before(before), after(after), moved(moved), captured(captured) {
+	
+	switch(moved) {
+		case PAWN:
+			notation += 'P';
+			break;
+		case BISHOP:
+			notation += 'B';
+			break;
+		case KNIGHT:
+			notation += 'N';
+			break;
+		case ROOK:
+			notation += 'R';
+			break;
+		case QUEEN:
+			notation += 'Q';
+			break;
+		case KING:
+			notation += 'K';
+			break;
+	}
+	
+	if(being == W) {
+		notation += (char)(97 + before.col);
+		notation += (char)(56 - before.col);
+	} else {
+		notation += (char)(104 - before.col);
+		notation += (char)(48 + before.col);
+	}
+
+	switch(captured) {
+		case PAWN:
+			notation += 'P';
+			break;
+		case BISHOP:
+			notation += 'B';
+			break;
+		case KNIGHT:
+			notation += 'N';
+			break;
+		case ROOK:
+			notation += 'R';
+			break;
+		case QUEEN:
+			notation += 'Q';
+			break;
+		case KING:
+			notation += 'K';
+			break;
+	}
+
+	if(being == W) {
+		notation += (char)(97 + after.col);
+		notation += (char)(56 - after.row);
+	} else {
+		notation += (char)(104 - after.col);
+		notation += (char)(48 + after.row);
+	}
+
+	switch(type) {
+		case PROMOTION:
+			notation += '=';
+			switch(become) {
+				case BISHOP:
+					notation += 'B';
+					break;
+				case KNIGHT:
+					notation += 'N';
+					break;
+				case ROOK:
+					notation += 'R';
+					break;
+				case QUEEN:
+					notation += 'Q';
+					break;
+			}
+			break;
+		case CASTLING:
+			notation += "++";
+			break;
+	}
 }
