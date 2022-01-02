@@ -5,13 +5,16 @@ void Chess::loadCharacters() {
 
 	TTF_Font *font = TTF_OpenFont("font/FreeMonoBold.ttf", 100);
 
-	char str[2] = {' ', '\0'};
-	SDL_Color color = {0, 0, 0};
-	for(uint8_t i = 0; i < 95; i++) {
-		str[0] = i + 32;
-		SDL_Surface *character = TTF_RenderText_Solid(font, str, color);
+	for(uint8_t i = 1; i < 9; i++) {
+		SDL_Surface *character = TTF_RenderGlyph_Shaded(font, i + 48, {0,0,0,255}, {127,127,127,255});
 
-		charTexture[i] = SDL_CreateTextureFromSurface(renderer, character);
+		charTexture[i - 1] = SDL_CreateTextureFromSurface(renderer, character);
+		SDL_FreeSurface(character);
+	}
+	for(uint8_t i = 9; i < 17; i++) {
+		SDL_Surface *character = TTF_RenderGlyph_Shaded(font, i + 88, {0,0,0,255}, {127,127,127,255});
+
+		charTexture[i - 1] = SDL_CreateTextureFromSurface(renderer, character);
 		SDL_FreeSurface(character);
 	}
 	TTF_Quit();
@@ -104,7 +107,7 @@ void Chess::createBoard() {
 			charRadius * 2,
 			charRadius * 2
 		};
-		SDL_RenderCopy(renderer, charTexture[65 + i], 0, &lineSec);
+		SDL_RenderCopy(renderer, charTexture[8 + i], 0, &lineSec);
 
 		lineSec = {
 			leftPadd + sqSize / 2 - charRadius + sqSize * i,
@@ -112,7 +115,7 @@ void Chess::createBoard() {
 			charRadius * 2,
 			charRadius * 2
 		};
-		SDL_RenderCopyEx(renderer, charTexture[65 + i], 0, &lineSec, 0, 0, SDL_FLIP_VERTICAL);
+		SDL_RenderCopyEx(renderer, charTexture[8 + i], 0, &lineSec, 0, 0, SDL_FLIP_VERTICAL);
 
 		lineSec = {
 			leftPadd - lineWidth / 2 - charRadius,
@@ -120,7 +123,7 @@ void Chess::createBoard() {
 			charRadius * 2,
 			charRadius * 2
 		};
-		SDL_RenderCopy(renderer, charTexture[24 - i], 0, &lineSec);
+		SDL_RenderCopy(renderer, charTexture[7 - i], 0, &lineSec);
 
 		lineSec = {
 			leftPadd + sqSize * 8 + lineWidth / 2 - charRadius,
@@ -128,7 +131,7 @@ void Chess::createBoard() {
 			charRadius * 2,
 			charRadius * 2
 		};
-		SDL_RenderCopyEx(renderer, charTexture[24 - i], 0, &lineSec, 0, 0, SDL_FLIP_VERTICAL);
+		SDL_RenderCopyEx(renderer, charTexture[7 - i], 0, &lineSec, 0, 0, SDL_FLIP_VERTICAL);
 	}
 
 	SDL_SetRenderTarget(renderer, 0);

@@ -78,7 +78,7 @@ private:
     SDL_Window *window{};
     SDL_Renderer *renderer{};
 
-    SDL_Texture *charTexture[95];
+    SDL_Texture *charTexture[16];
     SDL_Texture *pieceTexture[12];
 
     SDL_Texture *boardTexture{};
