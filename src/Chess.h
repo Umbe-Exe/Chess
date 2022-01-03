@@ -2,6 +2,7 @@
 #include "../SDL2-2.0.18/include/SDL.h"
 #include "../SDL2_image-2.0.5/include/SDL_image.h"
 #include "../SDL2_ttf-2.0.15/include/SDL_ttf.h"
+#include "LogWindow.h"
 #include <vector>
 #include <string>
 
@@ -23,27 +24,29 @@ public:
     }
 
     void run() {
+        bool running = true;
         SDL_Event event;
-        do {
+        while(running) {
             SDL_WaitEvent(&event);
-            switch(event.type) {
-                case SDL_WINDOWEVENT:
-                    if(event.window.event == SDL_WINDOWEVENT_RESIZED) {
-                        createBoard();
-                        createPieces();
+            if(SDL_GetWindowFlags(window) & SDL_WINDOW_INPUT_FOCUS)
+                switch(event.type) {
+                    case SDL_WINDOWEVENT:
+                        if(event.window.event == SDL_WINDOWEVENT_RESIZED) {
+                            createBoard();
+                            createPieces();
+                            drawBoard();
+                        } else if(event.window.event == SDL_WINDOWEVENT_CLOSE) running = false;
+                        break;
+                    case SDL_MOUSEBUTTONDOWN:
+                        movePiece(event.button.x, event.button.y);
                         drawBoard();
-                    }
-                    break;
-                case SDL_MOUSEBUTTONDOWN:
-                    movePiece(event.button.x, event.button.y);
-                    drawBoard();
-                    if(rotate && turn != being) {
-                        being = turn;
-                        rotateBoard();
-                    }
-                    break;
-            }
-        } while(event.type != SDL_QUIT);
+                        if(rotate && turn != being) {
+                            being = turn;
+                            rotateBoard();
+                        }
+                        break;
+                }
+        }
     }
 
     ~Chess() {
@@ -55,6 +58,7 @@ public:
         for(auto &i : charTexture) SDL_DestroyTexture(i);
         for(auto &i : pieceTexture) SDL_DestroyTexture(i);
 
+        logWindow.~LogWindow();
         SDL_Quit();
     }
     
@@ -63,7 +67,6 @@ private:
     void loadCharacters();
     void loadImages();
     SDL_Texture *load_texture(char const *path);
-
     void createBoard();
     void createPieces();
 
@@ -127,10 +130,12 @@ private:
         Move(PieceColor being, Location before, Location after, PieceType moved, PieceType captured, MoveType type = NORMAL, PieceType become = NONE);
         Move() {
             notation = "init";
-        };
+        }
     };
 
     std::vector<Move> moveLog{Move()};
+
+    LogWindow logWindow;
 
     std::vector<uint8_t> whiteCaptured, blackCaptured;
     Location whiteKing{7,4}, blackKing{0,4};
