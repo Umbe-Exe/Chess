@@ -1,22 +1,24 @@
 #include "Chess.h"
 
-void Chess::loadCharacters() {
+void Chess::loadCharacters(uint16_t size) {
+	for(auto &i : charTexture) SDL_DestroyTexture(i);
 	TTF_Init();
 
-	TTF_Font *font = TTF_OpenFont("font/FreeMonoBold.ttf", 100);
+	TTF_Font *font = TTF_OpenFont("font/FreeMonoBold.ttf", size);
 
 	for(uint8_t i = 1; i < 9; i++) {
-		SDL_Surface *character = TTF_RenderGlyph_Shaded(font, i + 48, {0,0,0,255}, {127,127,127,255});
+		SDL_Surface *character = TTF_RenderGlyph_Blended(font, i + 48, {0,0,0,255});
 
 		charTexture[i - 1] = SDL_CreateTextureFromSurface(renderer, character);
 		SDL_FreeSurface(character);
 	}
 	for(uint8_t i = 9; i < 17; i++) {
-		SDL_Surface *character = TTF_RenderGlyph_Shaded(font, i + 88, {0,0,0,255}, {127,127,127,255});
+		SDL_Surface *character = TTF_RenderGlyph_Blended(font, i + 88, {0,0,0,255});
 
 		charTexture[i - 1] = SDL_CreateTextureFromSurface(renderer, character);
 		SDL_FreeSurface(character);
 	}
+	TTF_CloseFont(font),
 	TTF_Quit();
 }
 
@@ -99,6 +101,7 @@ void Chess::createBoard() {
 	}
 
 	uint16_t charRadius = lineWidth * 30 / 100;
+	loadCharacters(charRadius * 2);
 
 	for(uint8_t i = 0; i < 8; i++) {
 		lineSec = {
@@ -176,12 +179,10 @@ void Chess::movePiece(int32_t x, int32_t y) {
 			SDL_Rect rect = getRect(i, j);
 
 			SDL_SetRenderTarget(renderer, piecesTexture);
-			SDL_SetTextureBlendMode(piecesTexture, SDL_BLENDMODE_NONE);
 			SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 			SDL_RenderFillRect(renderer, &rect);
 
 			SDL_SetRenderTarget(renderer, 0);
-			SDL_SetTextureBlendMode(piecesTexture, SDL_BLENDMODE_BLEND);
 
 			SDL_Event event;
 			do {
@@ -200,7 +201,6 @@ void Chess::movePiece(int32_t x, int32_t y) {
 			} while(event.type != SDL_MOUSEBUTTONUP && event.window.event != SDL_WINDOWEVENT_LEAVE);
 
 			SDL_SetRenderTarget(renderer, piecesTexture);
-			SDL_SetTextureBlendMode(piecesTexture, SDL_BLENDMODE_NONE);
 
 			uint8_t
 				ic = getRow(rect.y + sqSize / 2),
@@ -214,15 +214,17 @@ void Chess::movePiece(int32_t x, int32_t y) {
 					SDL_RenderFillRect(renderer, &rect);
 				}
 				SDL_RenderCopy(renderer, pieceTexture[board[i][j]], 0, &rect);
+
 				board[ic][jc] = board[i][j];
 				board[i][j] = NONE;
+
+				logWindow.addLog(moveLog.back().notation);
 			} else {
 				rect = getRect(i, j);
 				SDL_RenderCopy(renderer, pieceTexture[board[i][j]], 0, &rect);
 			}
 
 			SDL_SetRenderTarget(renderer, 0);
-			SDL_SetTextureBlendMode(piecesTexture, SDL_BLENDMODE_BLEND);
 		}
 	}
 }
@@ -243,15 +245,15 @@ bool Chess::logical(Location from, Location to) {
 
 	if(to.row > 7 || to.row < 0 || to.col > 7 || to.col < 0) return false;
 
-	uint8_t 
+	Piece
 		moving = board[from.row][from.col], 
 		captured = board[to.row][to.col];
 	PieceColor 
-		movingColor = static_cast<PieceColor>(moving % 2),
-		capturedColor = static_cast<PieceColor>(captured % 2);
+		movingColor = (PieceColor)PieceColor(moving),
+		capturedColor = (PieceColor)PieceColor(captured);
 	PieceType
-		movingType = static_cast<PieceType>(moving - movingColor),
-		capturedType = static_cast<PieceType>(captured - capturedColor);
+		movingType = (PieceType)PieceType(moving),
+		capturedType = (PieceType)PieceType(captured);
 
 	if(captured != NONE) if(movingColor == capturedColor) return false;
 	if(turn != movingColor) return false;
@@ -270,10 +272,10 @@ bool Chess::logical(Location from, Location to) {
 
 	if(movingType == PAWN) {
 		bool enPassant = 0, promotion = 0;
-		Move lastMove = moveLog[moveLog.size() - 1];
+		Move lastMove = moveLog.back();
 		if(being == movingColor) {
 			if(from.row == 3) {
-				if(lastMove.moved == PAWN && lastMove.after.row == 3)
+				if(lastMove.moved == PAWN && lastMove.after.row == 3 && lastMove.before.row == 1)
 					if(lastMove.after.col == from.col + 1) {
 						if(from.row - 1 == to.row && to.col == from.col + 1) enPassant = 1;
 					} else if(lastMove.after.col == from.col - 1) {
@@ -285,7 +287,7 @@ bool Chess::logical(Location from, Location to) {
 				   board[to.row][from.col + 1] != NONE && to.col == from.col + 1) promotion = 1;
 		} else {
 			if(from.row == 4) {
-				if(lastMove.moved == PAWN && lastMove.after.row == 4)
+				if(lastMove.moved == PAWN && lastMove.after.row == 4 && lastMove.before.row == 6)
 					if(lastMove.after.col == from.col + 1) {
 						if(from.row + 1 == to.row && to.col == from.col + 1) enPassant = 1;
 					} else if(lastMove.after.col == from.col - 1) {
@@ -355,12 +357,10 @@ bool Chess::logical(Location from, Location to) {
 				SDL_Event event;
 				do {
 					SDL_WaitEvent(&event);
-					
-					switch(event.type) {
-						case SDL_MOUSEBUTTONDOWN:
-							chosen = choice(event.button.x, event.button.y);
-							break;
-						case SDL_QUIT: delete this;
+
+					if(SDL_GetWindowFlags(window) & SDL_WINDOW_INPUT_FOCUS) {
+						if(event.type == SDL_MOUSEBUTTONDOWN) chosen = choice(event.button.x, event.button.y);
+						else if(event.window.event == SDL_WINDOWEVENT_CLOSE) delete this;
 					}
 				} while(chosen == NONE);
 
@@ -553,7 +553,7 @@ std::vector<Chess::Location> Chess::getOptions(Location from, PieceType type, Pi
 		case BISHOP:
 			for(uint8_t i = 1; i <= (from.row < from.col ? from.row : from.col); i++) {
 				if(board[from.row - i][from.col - i] != NONE) {
-					if(board[from.row - i][from.col - i] % 2 == color) break;
+					if(PieceColor(board[from.row - i][from.col - i]) == color) break;
 					else {
 						loc.push_back({from.row - i, from.col - i});
 						break;
@@ -563,7 +563,7 @@ std::vector<Chess::Location> Chess::getOptions(Location from, PieceType type, Pi
 			}
 			for(uint8_t i = 1; i <= (7 - from.row < 7 - from.col ? 7 - from.row : 7 - from.col); i++) {
 				if(board[from.row + i][from.col + i] != NONE) {
-					if(board[from.row + i][from.col + i] % 2 == color) break;
+					if(PieceColor(board[from.row + i][from.col + i]) == color) break;
 					else {
 						loc.push_back({from.row + i, from.col + i});
 						break;
@@ -573,7 +573,7 @@ std::vector<Chess::Location> Chess::getOptions(Location from, PieceType type, Pi
 			}
 			for(uint8_t i = 1; i <= (7 - from.row < from.col ? 7 - from.row : from.col); i++) {
 				if(board[from.row + i][from.col - i] != NONE) {
-					if(board[from.row + i][from.col - i] % 2 == color) break;
+					if(PieceColor(board[from.row + i][from.col - i]) == color) break;
 					else {
 						loc.push_back({from.row + i, from.col - i});
 						break;
@@ -583,7 +583,7 @@ std::vector<Chess::Location> Chess::getOptions(Location from, PieceType type, Pi
 			}
 			for(uint8_t i = 1; i <= (from.row < 7 - from.col ? from.row : 7 - from.col); i++) {
 				if(board[from.row - i][from.col + i] != NONE) {
-					if(board[from.row - i][from.col + i] % 2 == color) break;
+					if(PieceColor(board[from.row - i][from.col + i]) == color) break;
 					else {
 						loc.push_back({from.row - i, from.col + i});
 						break;
@@ -595,7 +595,7 @@ std::vector<Chess::Location> Chess::getOptions(Location from, PieceType type, Pi
 		case QUEEN:
 			for(uint8_t i = 1; i <= (from.row < from.col ? from.row : from.col); i++) {
 				if(board[from.row - i][from.col - i] != NONE) {
-					if(board[from.row - i][from.col - i] % 2 == color) break;
+					if(PieceColor(board[from.row - i][from.col - i]) == color) break;
 					else {
 						loc.push_back({from.row - i, from.col - i});
 						break;
@@ -605,7 +605,7 @@ std::vector<Chess::Location> Chess::getOptions(Location from, PieceType type, Pi
 			}
 			for(uint8_t i = 1; i <= (7 - from.row < 7 - from.col ? 7 - from.row : 7 - from.col); i++) {
 				if(board[from.row + i][from.col + i] != NONE) {
-					if(board[from.row + i][from.col + i] % 2 == color) break;
+					if(PieceColor(board[from.row + i][from.col + i]) == color) break;
 					else {
 						loc.push_back({from.row + i, from.col + i});
 						break;
@@ -615,7 +615,7 @@ std::vector<Chess::Location> Chess::getOptions(Location from, PieceType type, Pi
 			}
 			for(uint8_t i = 1; i <= (7 - from.row < from.col ? 7 - from.row : from.col); i++) {
 				if(board[from.row + i][from.col - i] != NONE) {
-					if(board[from.row + i][from.col - i] % 2 == color) break;
+					if(PieceColor(board[from.row + i][from.col - i]) == color) break;
 					else {
 						loc.push_back({from.row + i, from.col - i});
 						break;
@@ -625,7 +625,7 @@ std::vector<Chess::Location> Chess::getOptions(Location from, PieceType type, Pi
 			}
 			for(uint8_t i = 1; i <= (from.row < 7 - from.col ? from.row : 7 - from.col); i++) {
 				if(board[from.row - i][from.col + i] != NONE) {
-					if(board[from.row - i][from.col + i] % 2 == color) break;
+					if(PieceColor(board[from.row - i][from.col + i]) == color) break;
 					else {
 						loc.push_back({from.row - i, from.col + i});
 						break;
@@ -635,7 +635,7 @@ std::vector<Chess::Location> Chess::getOptions(Location from, PieceType type, Pi
 			}
 			for(uint8_t i = 1; i <= from.row; i++) {
 				if(board[from.row - i][from.col] != NONE) {
-					if(board[from.row - i][from.col] % 2 == color) break;
+					if(PieceColor(board[from.row - i][from.col]) == color) break;
 					else {
 						loc.push_back({from.row - i, from.col});
 						break;
@@ -645,7 +645,7 @@ std::vector<Chess::Location> Chess::getOptions(Location from, PieceType type, Pi
 			}
 			for(uint8_t i = 1; i <= 7 - from.row; i++) {
 				if(board[from.row + i][from.col] != NONE) {
-					if(board[from.row + i][from.col] % 2 == color) break;
+					if(PieceColor(board[from.row + i][from.col]) == color) break;
 					else {
 						loc.push_back({from.row + i, from.col});
 						break;
@@ -655,7 +655,7 @@ std::vector<Chess::Location> Chess::getOptions(Location from, PieceType type, Pi
 			}
 			for(uint8_t i = 1; i <= from.col; i++) {
 				if(board[from.row][from.col - i] != NONE) {
-					if(board[from.row][from.col - i] % 2 == color) break;
+					if(PieceColor(board[from.row][from.col - i]) == color) break;
 					else {
 						loc.push_back({from.row, from.col - i});
 						break;
@@ -665,7 +665,7 @@ std::vector<Chess::Location> Chess::getOptions(Location from, PieceType type, Pi
 			}
 			for(uint8_t i = 1; i <= 7 - from.col; i++) {
 				if(board[from.row][from.col + i] != NONE) {
-					if(board[from.row][from.col + i] % 2 == color) break;
+					if(PieceColor(board[from.row][from.col + i]) == color) break;
 					else {
 						loc.push_back({from.row, from.col + i});
 						break;
@@ -677,7 +677,7 @@ std::vector<Chess::Location> Chess::getOptions(Location from, PieceType type, Pi
 		case ROOK:
 			for(uint8_t i = 1; i <= from.row; i++) {
 				if(board[from.row - i][from.col] != NONE) {
-					if(board[from.row - i][from.col] % 2 == color) break;
+					if(PieceColor(board[from.row - i][from.col]) == color) break;
 					else {
 						loc.push_back({from.row - i, from.col});
 						break;
@@ -687,7 +687,7 @@ std::vector<Chess::Location> Chess::getOptions(Location from, PieceType type, Pi
 			}
 			for(uint8_t i = 1; i <= 7 - from.row; i++) {
 				if(board[from.row + i][from.col] != NONE) {
-					if(board[from.row + i][from.col] % 2 == color) break;
+					if(PieceColor(board[from.row + i][from.col]) == color) break;
 					else {
 						loc.push_back({from.row + i, from.col});
 						break;
@@ -697,7 +697,7 @@ std::vector<Chess::Location> Chess::getOptions(Location from, PieceType type, Pi
 			}
 			for(uint8_t i = 1; i <= from.col; i++) {
 				if(board[from.row][from.col - i] != NONE) {
-					if(board[from.row][from.col - i] % 2 == color) break;
+					if(PieceColor(board[from.row][from.col - i]) == color) break;
 					else {
 						loc.push_back({from.row, from.col - i});
 						break;
@@ -707,7 +707,7 @@ std::vector<Chess::Location> Chess::getOptions(Location from, PieceType type, Pi
 			}
 			for(uint8_t i = 1; i <= 7 - from.col; i++) {
 				if(board[from.row][from.col + i] != NONE) {
-					if(board[from.row][from.col + i] % 2 == color) break;
+					if(PieceColor(board[from.row][from.col + i]) == color) break;
 					else {
 						loc.push_back({from.row, from.col + i});
 						break;
@@ -719,56 +719,56 @@ std::vector<Chess::Location> Chess::getOptions(Location from, PieceType type, Pi
 		case KING:
 			if(from.row < 7) {
 				if(board[from.row + 1][from.col] != NONE) {
-					if(board[from.row + 1][from.col] % 2 != color)
+					if(PieceColor(board[from.row + 1][from.col]) != color)
 						loc.push_back({from.row + 1, from.col});
 				} else loc.push_back({from.row + 1, from.col});
 			}
 
 			if(from.row > 0) {
 				if(board[from.row - 1][from.col] != NONE) {
-					if(board[from.row - 1][from.col] % 2 != color)
+					if(PieceColor(board[from.row - 1][from.col]) != color)
 						loc.push_back({from.row - 1, from.col});
 				} else loc.push_back({from.row - 1, from.col});
 			}
 
 			if(from.row < 7 && from.col < 7) {
 				if(board[from.row + 1][from.col + 1] != NONE) {
-					if(board[from.row + 1][from.col + 1] % 2 != color)
+					if(PieceColor(board[from.row + 1][from.col + 1]) != color)
 						loc.push_back({from.row + 1, from.col + 1});
 				} else loc.push_back({from.row + 1, from.col + 1});
 			}
 
 			if(from.row < 7 && from.col > 0) {
 				if(board[from.row + 1][from.col - 1] != NONE) {
-					if(board[from.row + 1][from.col - 1] % 2 != color)
+					if(PieceColor(board[from.row + 1][from.col - 1]) != color)
 						loc.push_back({from.row + 1, from.col - 1});
 				} else loc.push_back({from.row + 1, from.col - 1});
 			}
 
 			if(from.row > 0 && from.col < 7) {
 				if(board[from.row - 1][from.col + 1] != NONE) {
-					if(board[from.row - 1][from.col + 1] % 2 != color)
+					if(PieceColor(board[from.row - 1][from.col + 1]) != color)
 						loc.push_back({from.row - 1, from.col + 1});
 				} else loc.push_back({from.row - 1, from.col + 1});
 			}
 
 			if(from.row > 0 && from.col > 0) {
 				if(board[from.row - 1][from.col - 1] != NONE) {
-					if(board[from.row - 1][from.col - 1] % 2 != color)
+					if(PieceColor(board[from.row - 1][from.col - 1]) != color)
 						loc.push_back({from.row - 1, from.col - 1});
 				} else loc.push_back({from.row - 1, from.col - 1});
 			}
 
 			if(from.col < 7) {
 				if(board[from.row][from.col + 1] != NONE) {
-					if(board[from.row][from.col + 1] % 2 != color)
+					if(PieceColor(board[from.row][from.col + 1]) != color)
 						loc.push_back({from.row, from.col + 1});
 				} else loc.push_back({from.row, from.col + 1});
 			}
 
 			if(from.col > 0) {
 				if(board[from.row][from.col - 1] != NONE) {
-					if(board[from.row][from.col - 1] % 2 != color)
+					if(PieceColor(board[from.row][from.col - 1]) != color)
 						loc.push_back({from.row, from.col - 1});
 				} else loc.push_back({from.row, from.col - 1});
 			}
@@ -780,9 +780,9 @@ std::vector<Chess::Location> Chess::getOptions(Location from, PieceType type, Pi
 bool Chess::inCheck(Location pos, PieceColor color) {
 	for(uint8_t i = 1; i <= (pos.row < pos.col ? pos.row : pos.col); i++) {
 		if(board[pos.row - i][pos.col - i] != NONE) {
-			if(board[pos.row - i][pos.col - i] % 2 == color) break;
+			if(PieceColor(board[pos.row - i][pos.col - i]) == color) break;
 			else {
-				switch(board[pos.row - i][pos.col - i] - !color) {
+				switch(PieceType(board[pos.row - i][pos.col - i])) {
 					case PAWN:
 						if(i == 1)
 							return being == color;
@@ -803,9 +803,9 @@ bool Chess::inCheck(Location pos, PieceColor color) {
 	}
 	for(uint8_t i = 1; i <= (7 - pos.row < 7 - pos.col ? 7 - pos.row : 7 - pos.col); i++) {
 		if(board[pos.row + i][pos.col + i] != NONE) {
-			if(board[pos.row + i][pos.col + i] % 2 == color) break;
+			if(PieceColor(board[pos.row + i][pos.col + i]) == color) break;
 			else {
-				switch(board[pos.row + i][pos.col + i] - !color) {
+				switch(PieceType(board[pos.row + i][pos.col + i])) {
 					case PAWN:
 						if(i == 1)
 							return being != color;
@@ -826,9 +826,9 @@ bool Chess::inCheck(Location pos, PieceColor color) {
 	}
 	for(uint8_t i = 1; i <= (7 - pos.row < pos.col ? 7 - pos.row : pos.col); i++) {
 		if(board[pos.row + i][pos.col - i] != NONE) {
-			if(board[pos.row + i][pos.col - i] % 2 == color) break;
+			if(PieceColor(board[pos.row + i][pos.col - i]) == color) break;
 			else {
-				switch(board[pos.row + i][pos.col - i] - !color) {
+				switch(PieceType(board[pos.row + i][pos.col - i])) {
 					case PAWN:
 						if(i == 1)
 							return being != color;
@@ -849,9 +849,9 @@ bool Chess::inCheck(Location pos, PieceColor color) {
 	}
 	for(uint8_t i = 1; i <= (pos.row < 7 - pos.col ? pos.row : 7 - pos.col); i++) {
 		if(board[pos.row - i][pos.col + i] != NONE) {
-			if(board[pos.row - i][pos.col + i] % 2 == color) break;
+			if(PieceColor(board[pos.row - i][pos.col + i]) == color) break;
 			else {
-				switch(board[pos.row - i][pos.col + i] - !color) {
+				switch(PieceType(board[pos.row - i][pos.col + i])) {
 					case PAWN:
 						if(i == 1)
 							return being == color;
@@ -871,9 +871,9 @@ bool Chess::inCheck(Location pos, PieceColor color) {
 	}
 	for(uint8_t i = 1; i <= pos.row; i++) {
 		if(board[pos.row - i][pos.col] != NONE) {
-			if(board[pos.row - i][pos.col] % 2 == color) break;
+			if(PieceColor(board[pos.row - i][pos.col]) == color) break;
 			else {
-				switch(board[pos.row - i][pos.col] - !color) {
+				switch(PieceType(board[pos.row - i][pos.col])) {
 					case ROOK:
 					case QUEEN:
 						return 1;
@@ -889,9 +889,9 @@ bool Chess::inCheck(Location pos, PieceColor color) {
 	}
 	for(uint8_t i = 1; i <= 7 - pos.row; i++) {
 		if(board[pos.row + i][pos.col] != NONE) {
-			if(board[pos.row + i][pos.col] % 2 == color) break;
+			if(PieceColor(board[pos.row + i][pos.col]) == color) break;
 			else {
-				switch(board[pos.row + i][pos.col] - !color) {
+				switch(PieceType(board[pos.row + i][pos.col])) {
 					case ROOK:
 					case QUEEN:
 						return 1;
@@ -907,9 +907,9 @@ bool Chess::inCheck(Location pos, PieceColor color) {
 	}
 	for(uint8_t i = 1; i <= pos.col; i++) {
 		if(board[pos.row][pos.col - i] != NONE) {
-			if(board[pos.row][pos.col - i] % 2 == color) break;
+			if(PieceColor(board[pos.row][pos.col - i]) == color) break;
 			else {
-				switch(board[pos.row][pos.col - i] - !color) {
+				switch(PieceType(board[pos.row][pos.col - i])) {
 					case ROOK:
 					case QUEEN:
 						return 1;
@@ -925,9 +925,9 @@ bool Chess::inCheck(Location pos, PieceColor color) {
 	}
 	for(uint8_t i = 1; i <= 7 - pos.col; i++) {
 		if(board[pos.row][pos.col + i] != NONE) {
-			if(board[pos.row][pos.col + i] % 2 == color) break;
+			if(PieceColor(board[pos.row][pos.col + i]) == color) break;
 			else {
-				switch(board[pos.row][pos.col + i] - !color) {
+				switch(PieceType(board[pos.row][pos.col + i])) {
 					case ROOK:
 					case QUEEN:
 						return 1;
@@ -944,28 +944,28 @@ bool Chess::inCheck(Location pos, PieceColor color) {
 
 	if(pos.row < 7 && pos.col > 1)
 		if(board[pos.row + 1][pos.col - 2] != NONE)
-			if(board[pos.row + 1][pos.col - 2] % 2 != color && board[pos.row + 1][pos.col - 2] - !color == KNIGHT) return 1;
-	if(pos.row < 6 && pos.col > 0)
-		if(board[pos.row + 2][pos.col - 1] != NONE)
-			if(board[pos.row + 2][pos.col - 1] % 2 != color && board[pos.row + 2][pos.col - 1] - !color == KNIGHT) return 1;
-	if(pos.row < 6 && pos.col < 7)
-		if(board[pos.row + 2][pos.col + 1] != NONE)
-			if(board[pos.row + 2][pos.col + 1] % 2 != color && board[pos.row + 2][pos.col + 1] - !color == KNIGHT) return 1;
-	if(pos.row < 7 && pos.col < 6)
-		if(board[pos.row + 1][pos.col + 2] != NONE)
-			if(board[pos.row + 1][pos.col + 2] % 2 != color && board[pos.row + 1][pos.col + 2] - !color == KNIGHT) return 1;
-	if(pos.row > 0 && pos.col > 1)
-		if(board[pos.row - 1][pos.col - 2] != NONE)
-			if(board[pos.row - 1][pos.col - 2] % 2 != color && board[pos.row - 1][pos.col - 2] - !color == KNIGHT) return 1;
-	if(pos.row > 1 && pos.col > 0)
-		if(board[pos.row - 2][pos.col - 1] != NONE)
-			if(board[pos.row - 2][pos.col - 1] % 2 != color && board[pos.row - 2][pos.col - 1] - !color == KNIGHT) return 1;
-	if(pos.row > 1 && pos.col < 7)
-		if(board[pos.row - 2][pos.col + 1] != NONE)
-			if(board[pos.row - 2][pos.col + 1] % 2 != color && board[pos.row - 2][pos.col + 1] - !color == KNIGHT) return 1;
-	if(pos.row > 0 && pos.col < 6)
-		if(board[pos.row - 1][pos.col + 2] != NONE)
-			if(board[pos.row - 1][pos.col + 2] % 2 != color && board[pos.row - 1][pos.col + 2] - !color == KNIGHT) return 1;
+			if(PieceColor(board[pos.row + 1][pos.col - 2]) != color && PieceType(board[pos.row + 1][pos.col - 2]) == KNIGHT) return 1;
+	if(pos.row < 6 && pos.col > 0)						 
+		if(board[pos.row + 2][pos.col - 1] != NONE)		 
+			if(PieceColor(board[pos.row + 2][pos.col - 1]) != color && PieceType(board[pos.row + 2][pos.col - 1]) == KNIGHT) return 1;
+	if(pos.row < 6 && pos.col < 7)						 
+		if(board[pos.row + 2][pos.col + 1] != NONE)		 
+			if(PieceColor(board[pos.row + 2][pos.col + 1]) != color && PieceType(board[pos.row + 2][pos.col + 1]) == KNIGHT) return 1;
+	if(pos.row < 7 && pos.col < 6)						 
+		if(board[pos.row + 1][pos.col + 2] != NONE)		 
+			if(PieceColor(board[pos.row + 1][pos.col + 2]) != color && PieceType(board[pos.row + 1][pos.col + 2]) == KNIGHT) return 1;
+	if(pos.row > 0 && pos.col > 1)						 
+		if(board[pos.row - 1][pos.col - 2] != NONE)		 
+			if(PieceColor(board[pos.row - 1][pos.col - 2]) != color && PieceType(board[pos.row - 1][pos.col - 2]) == KNIGHT) return 1;
+	if(pos.row > 1 && pos.col > 0)						 
+		if(board[pos.row - 2][pos.col - 1] != NONE)		 
+			if(PieceColor(board[pos.row - 2][pos.col - 1]) != color && PieceType(board[pos.row - 2][pos.col - 1]) == KNIGHT) return 1;
+	if(pos.row > 1 && pos.col < 7)						
+		if(board[pos.row - 2][pos.col + 1] != NONE)		
+			if(PieceColor(board[pos.row - 2][pos.col + 1]) != color && PieceType(board[pos.row - 2][pos.col + 1]) == KNIGHT) return 1;
+	if(pos.row > 0 && pos.col < 6)						
+		if(board[pos.row - 1][pos.col + 2] != NONE)		
+			if(PieceColor(board[pos.row - 1][pos.col + 2]) != color && PieceType(board[pos.row - 1][pos.col + 2]) == KNIGHT) return 1;
 
 	return 0;
 }
@@ -1069,10 +1069,10 @@ Chess::Move::Move(PieceColor being, Location before, Location after, PieceType m
 	
 	if(being == W) {
 		notation += (char)(97 + before.col);
-		notation += (char)(56 - before.col);
+		notation += (char)(56 - before.row);
 	} else {
 		notation += (char)(104 - before.col);
-		notation += (char)(48 + before.col);
+		notation += (char)(48 + before.row);
 	}
 
 	switch(captured) {

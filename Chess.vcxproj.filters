@@ -21,9 +21,15 @@
     <ClCompile Include="src\Chess.cpp">
       <Filter>File di origine</Filter>
     </ClCompile>
+    <ClCompile Include="src\LogWindow.cpp">
+      <Filter>File di origine</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Chess.h">
+      <Filter>File di intestazione</Filter>
+    </ClInclude>
+    <ClInclude Include="src\LogWindow.h">
       <Filter>File di intestazione</Filter>
     </ClInclude>
   </ItemGroup>

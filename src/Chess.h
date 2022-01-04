@@ -6,6 +6,11 @@
 #include <vector>
 #include <string>
 
+#define PieceColor(x) (x % 2)
+#define PieceType(x) (x - x % 2)
+
+typedef uint8_t Piece;
+
 class Chess {
 
 public:
@@ -13,14 +18,14 @@ public:
     Chess() {
         SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO | SDL_INIT_EVENTS);
         window = SDL_CreateWindow("Chess", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_RESIZABLE);
-        renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE);
- 
-        loadCharacters();
+        renderer = SDL_CreateRenderer(window, 0, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE);
+
         loadImages();
         createBoard();
         createPieces();
-
         drawBoard();
+
+        logWindow.addLog(moveLog.back().notation);
     }
 
     void run() {
@@ -28,7 +33,7 @@ public:
         SDL_Event event;
         while(running) {
             SDL_WaitEvent(&event);
-            if(SDL_GetWindowFlags(window) & SDL_WINDOW_INPUT_FOCUS)
+            if(SDL_GetWindowFlags(window) & SDL_WINDOW_INPUT_FOCUS) {
                 switch(event.type) {
                     case SDL_WINDOWEVENT:
                         if(event.window.event == SDL_WINDOWEVENT_RESIZED) {
@@ -46,6 +51,10 @@ public:
                         }
                         break;
                 }
+            } else if(logWindow.inFocus()) {
+                if(event.type == SDL_MOUSEBUTTONDOWN);
+                    
+            }
         }
     }
 
@@ -61,15 +70,14 @@ public:
         logWindow.~LogWindow();
         SDL_Quit();
     }
-    
+
 private:
 
-    void loadCharacters();
+    void loadCharacters(uint16_t size);
     void loadImages();
     SDL_Texture *load_texture(char const *path);
     void createBoard();
     void createPieces();
-
     void drawBoard();
 
     void movePiece(int32_t x, int32_t y);
@@ -137,7 +145,7 @@ private:
 
     LogWindow logWindow;
 
-    std::vector<uint8_t> whiteCaptured, blackCaptured;
+    std::vector<Piece> whiteCaptured, blackCaptured;
     Location whiteKing{7,4}, blackKing{0,4};
 
     PieceColor turn = W;
@@ -151,7 +159,7 @@ private:
 
     uint32_t whiteTimer, blackTimer;
 
-    uint8_t board[8][8] = {
+    Piece board[8][8] = {
         {ROOK + B,KNIGHT + B,BISHOP + B,QUEEN + B,KING + B,BISHOP + B,KNIGHT + B,ROOK + B},
         {PAWN + B,PAWN + B,PAWN + B,PAWN + B,PAWN + B,PAWN + B,PAWN + B,PAWN + B},
         {NONE,NONE,NONE,NONE,NONE,NONE,NONE,NONE},
